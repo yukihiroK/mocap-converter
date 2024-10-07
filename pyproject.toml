@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bvh-converter"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "yukihiroK", email = "57009247+yukihiroK@users.noreply.github.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/yukihiroK/bvh-converter#readme"
+Issues = "https://github.com/yukihiroK/bvh-converter/issues"
+Source = "https://github.com/yukihiroK/bvh-converter"
+
+[tool.hatch.version]
+path = "src/bvh_converter/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/bvh_converter tests}"
+
+[tool.coverage.run]
+source_pkgs = ["bvh_converter", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/bvh_converter/__about__.py",
+]
+
+[tool.coverage.paths]
+bvh_converter = ["src/bvh_converter", "*/bvh-converter/src/bvh_converter"]
+tests = ["tests", "*/bvh-converter/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
