@@ -15,4 +15,16 @@ def test_node():
     assert child.parent is None
     assert parent.children == []
     assert parent.depth == 0
-    assert child.depth == 1
+    assert child.depth == 0
+
+
+def test_node_depth():
+    root = Node("root")
+    child1 = Node("child1", parent=root)
+    child2 = Node("child2", parent=child1)
+    child3 = Node("child3", parent=child2)
+
+    assert root.depth == 0
+    assert child1.depth == 1
+    assert child2.depth == 2
+    assert child3.depth == 3

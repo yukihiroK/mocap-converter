@@ -50,9 +50,6 @@ class Node:
 
         if parent is not None:
             parent._add_child(self)
-            self.__depth = parent.depth + 1
-        else:
-            self.__depth = 0
 
     def _add_child(self, child: "Node"):
         if child in self.__children:
@@ -78,7 +75,9 @@ class Node:
 
     @property
     def depth(self) -> int:
-        return self.__depth
+        if self.__parent is None:
+            return 0
+        return self.__parent.depth + 1
 
     def __eq__(self, other):
         return self.__name == other.name
