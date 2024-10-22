@@ -24,6 +24,7 @@ class MotionData:
             frame_time (float): The time between frames in seconds.
         """
 
+        frame_count = 0
         if position_data:
             frame_count = len(list(position_data.values())[0])
             for name, position in position_data.items():
@@ -35,6 +36,9 @@ class MotionData:
                     raise ValueError(f"Position data for '{name}' must have shape (N, 3): {position.shape}")
 
         if rotation_data:
+            if frame_count == 0:
+                frame_count = len(list(rotation_data.values())[0])
+
             for name, rotation in rotation_data.items():
                 if rotation.shape[0] != frame_count:
                     raise ValueError(
