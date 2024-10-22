@@ -24,7 +24,10 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = []
+dependencies = [
+  "numpy",
+  "scipy",
+]
 
 [project.urls]
 Documentation = "https://github.com/yukihiroK/bvh-converter#readme"
