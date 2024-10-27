@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from typing import List, Dict, Optional, Literal, Tuple
+from typing import List, Dict, Optional, Tuple
 
 from bvh_converter.node import Node
 from bvh_converter.kinematic_tree import KinematicTree
@@ -110,7 +110,7 @@ class BVHLoader:
             if not node_name == "Site":
                 raise self.ParseError(f'"End {node_name}" is not a valid node type (expected "End Site")')
 
-            node_name = self.__get_end_site_name(self.__current_node.name)
+            node_name = f"{self.__current_node.name}_EndSite"
 
         self.__push_node(Node(node_name, parent=self.__current_node))
 
@@ -119,7 +119,7 @@ class BVHLoader:
             raise self.ParseError("OFFSET specified before ROOT or JOINT is defined")
 
         try:
-            offset_values = list(map(float, offset))
+            offset_values = tuple(map(float, offset))
         except ValueError:
             raise self.ParseError(f"Invalid OFFSET values: {' '.join(offset)}")
 
@@ -130,25 +130,25 @@ class BVHLoader:
             raise self.ParseError("CHANNELS specified before ROOT or JOINT is defined")
 
         try:
-            valid_channels = list(map(validate_channel, channels))
+            valid_channels = tuple(map(validate_channel, channels))
         except ValueError as e:
             raise self.ParseError(str(e))
 
-        current_node_name = self.__current_node.name
-        self.__node_channels.append(NodeChannel(current_node_name, valid_channels))
-        self.__channel_count += len(valid_channels)
+        node_channel = NodeChannel.from_channels(self.__current_node.name, valid_channels)
+        self.__node_channels.append(node_channel)
+        self.__channel_count += node_channel.channel_count
 
-        if any("position" in channel for channel in valid_channels):
-            self.__position_data[current_node_name] = []
-        if any("rotation" in channel for channel in valid_channels):
-            self.__rotation_data[current_node_name] = []
+        if node_channel.has_position_channels:
+            self.__position_data[node_channel.name] = []
+        if node_channel.has_rotation_channels:
+            self.__rotation_data[node_channel.name] = []
 
     def __parse_motion_data(self, lines: List[str]):
         if not self.__nodes:
             raise self.ParseError("No nodes defined before MOTION data")
 
-        num_frames = self.__parse_frame_num(lines[0])
-        self.__frame_time = self.__parse_frame_time(lines[1])
+        # num_frames = _parse_frame_num(lines[0])
+        self.__frame_time = _parse_frame_time(lines[1])
 
         for line in lines[2:]:
             frame_data = line.strip().split()
@@ -157,33 +157,9 @@ class BVHLoader:
 
             self.__parse_frame_data(frame_data)
 
-    def __parse_frame_num(self, line: str):
-        tokens = line.strip().split()
-        if tokens[0] != "Frames:":
-            raise self.ParseError("The number of frames is not specified")
-
-        try:
-            num_frames = int(tokens[1])
-        except ValueError:
-            raise self.ParseError(f"Invalid number of frames: {tokens[1]}")
-
-        return num_frames
-
-    def __parse_frame_time(self, line: str):
-        tokens = line.strip().split()
-        if tokens[0] != "Frame" or tokens[1] != "Time:":
-            raise self.ParseError("Frame time is not specified")
-
-        try:
-            frame_time = float(tokens[2])
-        except ValueError:
-            raise self.ParseError(f"Invalid frame time: {tokens[2]}")
-
-        return frame_time
-
     def __parse_frame_data(self, frame_data: List[str]):
         try:
-            channel_values = list(map(float, frame_data))
+            channel_values = tuple(map(float, frame_data))
         except ValueError:
             raise self.ParseError(f"Invalid values in frame data: {' '.join(frame_data)}")
 
@@ -191,69 +167,69 @@ class BVHLoader:
             raise self.ParseError(f"Expected {self.__channel_count} channel values, got {len(channel_values)} instead")
 
         offset = 0
-        for node_name, channels in self.__node_channels:
-            has_position = node_name in self.__position_data
-            has_rotation = node_name in self.__rotation_data
+        for node_channel in self.__node_channels:
 
-            values = channel_values[offset : offset + len(channels)]
-            position, rotation = self.__parse_channel_value(channels, values)
+            values = channel_values[offset : offset + node_channel.channel_count]
+            position, rotation = _parse_channel_values(node_channel.channels, values)
 
-            if has_position:
-                self.__position_data[node_name].append(position)
-            if has_rotation:
-                self.__rotation_data[node_name].append(rotation.as_quat())  # scalar-last
+            if node_channel.has_position_channels:
+                self.__position_data[node_channel.name].append(position)
+            if node_channel.has_rotation_channels:
+                self.__rotation_data[node_channel.name].append(rotation.as_quat())  # scalar-last
 
-            offset += len(channels)
-
-    def __parse_channel_value(self, channels: List[CHANNEL_TYPES], values: List[float]) -> Tuple[np.ndarray, R]:
-        position = np.zeros(3)
-        rot_order = ""
-        rot_values = []
-
-        for channel, value in zip(channels, values):
-            if channel == "Xposition":
-                position[0] = value
-            elif channel == "Yposition":
-                position[1] = value
-            elif channel == "Zposition":
-                position[2] = value
-            elif channel == "Xrotation":
-                rot_order += "X"
-                rot_values.append(value)
-            elif channel == "Yrotation":
-                rot_order += "Y"
-                rot_values.append(value)
-            elif channel == "Zrotation":
-                rot_order += "Z"
-                rot_values.append(value)
-
-        rotation = R.from_euler(rot_order, rot_values, degrees=True) if rot_order else R.identity()
-        return position, rotation
-
-    def __get_end_site_name(self, parent_node_name: str) -> str:
-        return f"{parent_node_name}_EndSite"
+            offset += node_channel.channel_count
 
 
-#     def calculate_positions(self, motion_data):
-#         positions = []
-#         for frame in motion_data:
-#             # Assuming frame contains rotation data for each joint
-#             for joint_name, rotation_data in frame.items():
-#                 if len(rotation_data) == 6:
-#                     offset = rotation_data[:3]
-#                     self.joints[joint_name].offset = offset
-#                     rotation = R.from_euler('ZYX', rotation_data[3:], degrees=True)
-#                 elif len(rotation_data) == 3:
-#                     rotation = R.from_euler('ZXY', rotation_data[:3], degrees=True)
-#                 self.joints[joint_name].rotation = rotation
+def _parse_frame_num(line: str):
+    tokens = line.strip().split()
+    if tokens[0] != "Frames:":
+        raise BVHLoader.ParseError("The number of frames is not specified")
 
-#             # Calculate transforms starting from the root
-#             self.root.calculate_transform()
-#             positions.append(self.get_joint_positions())
-#         return positions
+    try:
+        num_frames = int(tokens[1])
+    except ValueError:
+        raise BVHLoader.ParseError(f"Invalid number of frames: {tokens[1]}")
 
-#     def get_joint_positions(self):
-#         positions = {}
-#         for name, joint in self.joints.items():
-#             positions[name] = joint.get_world_position()
-#         return positions
+    return num_frames
+
+
+def _parse_frame_time(line: str):
+    tokens = line.strip().split()
+    if tokens[0] != "Frame" or tokens[1] != "Time:":
+        raise BVHLoader.ParseError("Frame time is not specified")
+
+    try:
+        frame_time = float(tokens[2])
+    except ValueError:
+        raise BVHLoader.ParseError(f"Invalid frame time: {tokens[2]}")
+
+    return frame_time
+
+
+def _parse_channel_values(channels: Tuple[CHANNEL_TYPES, ...], values: Tuple[float, ...]) -> Tuple[np.ndarray, R]:
+    if len(channels) != len(values):
+        raise BVHLoader.ParseError("Number of channels and values do not match")
+
+    position = np.zeros(3)
+    rot_order = ""
+    rot_values = []
+
+    for channel, value in zip(channels, values):
+        if channel == "Xposition":
+            position[0] = value
+        elif channel == "Yposition":
+            position[1] = value
+        elif channel == "Zposition":
+            position[2] = value
+        elif channel == "Xrotation":
+            rot_order += "X"
+            rot_values.append(value)
+        elif channel == "Yrotation":
+            rot_order += "Y"
+            rot_values.append(value)
+        elif channel == "Zrotation":
+            rot_order += "Z"
+            rot_values.append(value)
+
+    rotation = R.from_euler(rot_order, rot_values, degrees=True) if rot_order else R.identity()
+    return position, rotation
