@@ -6,7 +6,8 @@ from typing import List, Dict, Optional, Tuple
 from bvh_converter.node import Node
 from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData
-from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, validate_channel, NodeChannel
+from bvh_converter.io.bvh.node_channel import NodeChannel
+from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, validate_channel
 
 
 def load_bvh(filename: str) -> MotionData:
