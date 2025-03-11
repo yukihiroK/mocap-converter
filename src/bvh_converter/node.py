@@ -70,8 +70,20 @@ class Node:
         return self.__parent
 
     @property
+    def is_root(self) -> bool:
+        return self.__parent is None
+
+    @property
     def children(self) -> List["Node"]:
         return self.__children.copy()
+
+    @property
+    def has_children(self) -> bool:
+        return bool(self.__children)
+
+    @property
+    def has_siblings(self) -> bool:
+        return bool(self.__parent) and len(self.__parent.children) > 1
 
     @property
     def depth(self) -> int:

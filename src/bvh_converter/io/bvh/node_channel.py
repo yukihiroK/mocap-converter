@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, List, Literal
 
 from bvh_converter.io.bvh.types import (
     CHANNEL_TYPES,
@@ -15,25 +15,28 @@ from bvh_converter.io.bvh.types import (
 class NodeChannel:
 
     name: str
-    channels: Tuple[CHANNEL_TYPES, ...]
+    # channels: Tuple[CHANNEL_TYPES, ...]
     position_channels: Tuple[POSITION_CHANNELS, ...]
     rotation_channels: Tuple[ROTATION_CHANNELS, ...]
-    rotation_order: ROTATION_ORDER
+    # rotation_order: ROTATION_ORDER
 
     @staticmethod
     def from_channels(name: str, channels: Tuple[CHANNEL_TYPES, ...]) -> "NodeChannel":
         position_channels = filter_position_channels(channels)
         rotation_channels = filter_rotation_channels(channels)
-        return NodeChannel(name, channels, position_channels, rotation_channels, "ZXY")
+        return NodeChannel(name, position_channels, rotation_channels)
 
     @staticmethod
     def from_rotation_order(name: str, rotation_order: ROTATION_ORDER, has_position_channels: bool) -> "NodeChannel":
         position_channels: Tuple[POSITION_CHANNELS, ...] = (
             ("Xposition", "Yposition", "Zposition") if has_position_channels else ()
         )
-        rotation_channels = _get_node_channels(rotation_order)
-        channels: Tuple[CHANNEL_TYPES, ...] = position_channels + rotation_channels  # Position channels first
-        return NodeChannel(name, channels, position_channels, rotation_channels, rotation_order)
+        rotation_channels = _get_rotation_channels_from_order(rotation_order)
+        return NodeChannel(name, position_channels, rotation_channels)
+
+    @property
+    def channels(self) -> Tuple[CHANNEL_TYPES, ...]:
+        return self.position_channels + self.rotation_channels  # position channels first
 
     @property
     def channel_count(self) -> int:
@@ -47,8 +50,12 @@ class NodeChannel:
     def has_rotation_channels(self) -> bool:
         return bool(self.rotation_channels)
 
+    @property
+    def rotation_order(self) -> ROTATION_ORDER:
+        return _get_rotation_order_from_channels(self.rotation_channels)
 
-def _get_node_channels(
+
+def _get_rotation_channels_from_order(
     rotation_order: ROTATION_ORDER,
 ) -> Tuple[ROTATION_CHANNELS, ...]:
 
@@ -64,3 +71,23 @@ def _get_node_channels(
         return "Zrotation", "Xrotation", "Yrotation"
     elif rotation_order == "ZYX":
         return "Zrotation", "Yrotation", "Xrotation"
+
+
+def _get_rotation_order_from_channels(
+    rotation_channels: Tuple[ROTATION_CHANNELS, ...],
+) -> ROTATION_ORDER:
+
+    if rotation_channels == ("Xrotation", "Yrotation", "Zrotation"):
+        return "XYZ"
+    elif rotation_channels == ("Xrotation", "Zrotation", "Yrotation"):
+        return "XZY"
+    elif rotation_channels == ("Yrotation", "Xrotation", "Zrotation"):
+        return "YXZ"
+    elif rotation_channels == ("Yrotation", "Zrotation", "Xrotation"):
+        return "YZX"
+    elif rotation_channels == ("Zrotation", "Xrotation", "Yrotation"):
+        return "ZXY"
+    elif rotation_channels == ("Zrotation", "Yrotation", "Xrotation"):
+        return "ZYX"
+
+    raise ValueError(f"Invalid rotation channels: {rotation_channels}")

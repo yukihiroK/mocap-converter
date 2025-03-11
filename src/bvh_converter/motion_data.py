@@ -57,13 +57,13 @@ class MotionData:
     def frame_count(self) -> int:
         return self.__frame_count
 
-    @property
-    def position_data(self) -> Dict[str, np.ndarray]:
-        return self.__position_data.copy()
+    # @property
+    # def position_data(self) -> Dict[str, np.ndarray]:
+    #     return self.__position_data.copy()
 
-    @property
-    def rotation_data(self) -> Dict[str, np.ndarray]:
-        return self.__rotation_data.copy()
+    # @property
+    # def rotation_data(self) -> Dict[str, np.ndarray]:
+    #     return self.__rotation_data.copy()
 
     def get_positions(self, name: str) -> np.ndarray:
         return self.__position_data[name]
