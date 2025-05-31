@@ -74,6 +74,10 @@ class Node:
         return self.__parent is None
 
     @property
+    def is_leaf(self) -> bool:
+        return not self.__children
+
+    @property
     def children(self) -> List["Node"]:
         return self.__children.copy()
 
@@ -84,6 +88,10 @@ class Node:
     @property
     def has_siblings(self) -> bool:
         return bool(self.__parent) and len(self.__parent.children) > 1
+
+    @property
+    def children_count(self) -> int:
+        return len(self.__children)
 
     @property
     def depth(self) -> int:
