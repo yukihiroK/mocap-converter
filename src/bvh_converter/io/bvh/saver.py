@@ -110,13 +110,20 @@ def _get_motion_values(
     node_channels: List[NodeChannel],
     motion_data: MotionData,
 ) -> np.ndarray:
-
+    kinematic_tree = motion_data.kinematic_tree
     motion_values = []
     for node_channel in node_channels:
-        if node_channel.has_position_channels:
+        node = kinematic_tree.get_node(node_channel.name)
+        if node is None:
+            continue
+
+        if node.is_leaf and not node.has_siblings:
+            continue
+
+        if node_channel.has_position_channels and motion_data.has_positions(node_channel.name):
             positions = motion_data.get_positions(node_channel.name)  # (frames, 3)
             motion_values.append(positions)
-        if node_channel.has_rotation_channels:
+        if node_channel.has_rotation_channels and motion_data.has_rotations(node_channel.name):
             rotations = motion_data.get_rotations(node_channel.name)
             rotations = R.from_quat(rotations).as_euler(node_channel.rotation_order, degrees=True)  # (frames, 3)
             motion_values.append(rotations)
