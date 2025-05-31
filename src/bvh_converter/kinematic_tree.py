@@ -61,8 +61,11 @@ class KinematicTree:
 
         return cls(result)
 
-    def get_node(self, name: str) -> Optional[Node]:
-        return self.__nodes.get(name)
+    def get_node(self, name: str) -> Node:
+        if name not in self.__nodes:
+            raise KeyError(f"Node '{name}' not found in the kinematic tree.")
+
+        return self.__nodes[name]
 
     def add_node(self, node: Node):
         if node.name in self.__nodes:
