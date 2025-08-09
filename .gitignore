@@ -1,0 +1,13 @@
+*.pyc
+*.pyo
+*.db
+*.log
+*.mo
+._*
+*.*~
+__pycache__
+
+.vscode/
+
+*.bvh
+*.gif
