@@ -1,9 +1,7 @@
 import os
-from typing import Dict, List
 import pytest
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from pathlib import Path
 
 from bvh_converter.io.bvh.loader import load_bvh
 from bvh_converter.pos2rot import get_rotations_from_positions
@@ -36,7 +34,7 @@ def test_rot2pos2rot(motion_data: MotionData):
     root_pos: np.ndarray = motion_data.get_positions(root_node.name)
 
     # Convert rotations to positions
-    converted_positions: Dict[str, np.ndarray] = get_positions_from_rotations(
+    converted_positions: dict[str, np.ndarray] = get_positions_from_rotations(
         motion_data, root_pos, root_node, R.identity(), scale=1
     )
 
@@ -45,7 +43,7 @@ def test_rot2pos2rot(motion_data: MotionData):
     )
 
     # Convert back to rotations
-    converted_rotations: Dict[str, R] = get_rotations_from_positions(positional_data, root_node)
+    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node)
 
     # Compare with original rotations
     for node_name, converted_rotation in converted_rotations.items():
@@ -82,14 +80,14 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     root_pos: np.ndarray = motion_data.get_positions(root_node.name)
 
     # Convert rotations to positions
-    converted_positions: Dict[str, np.ndarray] = get_positions_from_rotations(motion_data, root_pos, root_node)
+    converted_positions: dict[str, np.ndarray] = get_positions_from_rotations(motion_data, root_pos, root_node)
 
     positional_data: MotionData = MotionData(
         motion_data.kinematic_tree, positions=converted_positions, rotations=None, frame_time=motion_data.frame_time
     )
 
     # Convert back to rotations
-    converted_rotations: Dict[str, R] = get_rotations_from_positions(positional_data, root_node)
+    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node)
 
     rotational_data: MotionData = MotionData(
         motion_data.kinematic_tree,
@@ -101,7 +99,7 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     root_pos: np.ndarray = rotational_data.get_positions(root_node.name)
 
     # Convert back to positions
-    final_positions: Dict[str, np.ndarray] = get_positions_from_rotations(rotational_data, root_pos, root_node)
+    final_positions: dict[str, np.ndarray] = get_positions_from_rotations(rotational_data, root_pos, root_node)
 
     # Compare final positions with original positions
     for node_name, final_position in final_positions.items():
