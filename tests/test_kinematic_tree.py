@@ -22,10 +22,13 @@ def test_kinematic_tree_remove_node():
     tree.remove_node("child1")
 
     assert tree.get_node("root") == root
-    assert tree.get_node("child1") is None
+    with pytest.raises(KeyError):
+        tree.get_node("child1")
     assert tree.get_node("child2") == child2
-    assert tree.get_node("grandchild1") is None
-    assert tree.get_node("grandchild2") is None
+    with pytest.raises(KeyError):
+        tree.get_node("grandchild1")
+    with pytest.raises(KeyError):
+        tree.get_node("grandchild2")
 
 
 def test_kinematic_tree_from_dict_remove_node():
@@ -61,10 +64,13 @@ def test_kinematic_tree_from_dict_remove_node():
     tree.remove_node("child1")
 
     assert tree.get_node("root") == root
-    assert tree.get_node("child1") is None
+    with pytest.raises(KeyError):
+        tree.get_node("child1")
     assert tree.get_node("child2") == child2
-    assert tree.get_node("grandchild1") is None
-    assert tree.get_node("grandchild2") is None
+    with pytest.raises(KeyError):
+        tree.get_node("grandchild1")
+    with pytest.raises(KeyError):
+        tree.get_node("grandchild2")
 
 
 def test_kinematic_tree_from_dict_remove_root():
@@ -99,11 +105,16 @@ def test_kinematic_tree_from_dict_remove_root():
 
     tree.remove_node("root")
 
-    assert tree.get_node("root") is None
-    assert tree.get_node("child1") is None
-    assert tree.get_node("child2") is None
-    assert tree.get_node("grandchild1") is None
-    assert tree.get_node("grandchild2") is None
+    with pytest.raises(KeyError):
+        tree.get_node("root")
+    with pytest.raises(KeyError):
+        tree.get_node("child1")
+    with pytest.raises(KeyError):
+        tree.get_node("child2")
+    with pytest.raises(KeyError):
+        tree.get_node("grandchild1")
+    with pytest.raises(KeyError):
+        tree.get_node("grandchild2")
 
 
 def test_kinematic_tree_add_node():
