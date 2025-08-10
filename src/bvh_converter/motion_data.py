@@ -1,6 +1,4 @@
 import numpy as np
-from scipy.spatial.transform import Rotation as R
-from typing import List, Dict, Optional
 
 from bvh_converter.kinematic_tree import KinematicTree
 
@@ -10,8 +8,8 @@ class MotionData:
     def __init__(
         self,
         kinematic_tree: KinematicTree,
-        positions: Optional[Dict[str, np.ndarray]] = None,
-        rotations: Optional[Dict[str, np.ndarray]] = None,
+        positions: dict[str, np.ndarray] | None = None,
+        rotations: dict[str, np.ndarray] | None = None,
         frame_time: float = 1 / 30,
     ):
         """

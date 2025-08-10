@@ -1,8 +1,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from typing import List, Dict, Optional, Literal, Tuple
-
 from bvh_converter.node import Node
 from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData
@@ -25,15 +23,15 @@ class BVHSaver:
 
     """
 
-    def __init__(self, rotation_orders: Dict[str, ROTATION_ORDER] = {}):
+    def __init__(self, rotation_orders: dict[str, ROTATION_ORDER] = {}):
         self.rotation_orders = rotation_orders
-        self.__ordered_node_channels: List[NodeChannel] = []
+        self.__ordered_node_channels: list[NodeChannel] = []
 
     def _stringify_nodes_recursive(
         self,
         node: Node,
         indent: str = "  ",
-    ) -> List[str]:
+    ) -> list[str]:
 
         node_channel = NodeChannel.from_rotation_order(
             name=node.name,
@@ -107,7 +105,7 @@ class BVHSaver:
 
 
 def _get_motion_values(
-    node_channels: List[NodeChannel],
+    node_channels: list[NodeChannel],
     motion_data: MotionData,
 ) -> np.ndarray:
     kinematic_tree = motion_data.kinematic_tree
@@ -142,10 +140,10 @@ def _stringify_node(
     node_type: NODE_TYPES,
     node_name: str,
     offset: np.ndarray,
-    channels: Optional[Tuple[CHANNEL_TYPES, ...]] = None,
-    children: Optional[List[str]] = None,
+    channels: tuple[CHANNEL_TYPES, ...] | None = None,
+    children: list[str] | None = None,
     indent: str = "  ",
-) -> List[str]:
+) -> list[str]:
     lines = []
     if node_type == "End":
         lines.append("End Site")

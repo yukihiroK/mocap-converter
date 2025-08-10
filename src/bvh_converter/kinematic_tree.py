@@ -1,5 +1,3 @@
-from typing import Optional, List, TypedDict
-
 from bvh_converter.node import Node
 
 
@@ -31,14 +29,14 @@ class KinematicTree:
 
         pass
 
-    def __init__(self, nodes: List[Node]):
-        self.__root: Optional[Node] = None
+    def __init__(self, nodes: list[Node]):
+        self.__root: Node | None = None
         self.__nodes: dict[str, Node] = {}
 
         self.add_nodes(nodes)
 
     @classmethod
-    def from_params(cls, nodes: List[Node.NodeParams]) -> "KinematicTree":
+    def from_params(cls, nodes: list[Node.NodeParams]) -> "KinematicTree":
         root_nodes = [node for node in nodes if not node.get("parent")]
         if len(root_nodes) < 1:
             raise cls.NoRootError
@@ -83,7 +81,7 @@ class KinematicTree:
         if self.__root is None:  # called after all nodes are added recursively
             raise self.NoRootError
 
-    def add_nodes(self, nodes: List[Node]):
+    def add_nodes(self, nodes: list[Node]):
         for node in nodes:
             self.add_node(node)
 
@@ -101,7 +99,7 @@ class KinematicTree:
         self.__remove_node(node)
 
     @property
-    def root(self) -> Optional[Node]:
+    def root(self) -> Node | None:
         return self.__root
 
     @property

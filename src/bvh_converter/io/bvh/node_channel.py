@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Tuple, List, Literal
 
 from bvh_converter.io.bvh.types import (
     CHANNEL_TYPES,
@@ -16,26 +15,26 @@ class NodeChannel:
 
     name: str
     # channels: Tuple[CHANNEL_TYPES, ...]
-    position_channels: Tuple[POSITION_CHANNELS, ...]
-    rotation_channels: Tuple[ROTATION_CHANNELS, ...]
+    position_channels: tuple[POSITION_CHANNELS, ...]
+    rotation_channels: tuple[ROTATION_CHANNELS, ...]
     # rotation_order: ROTATION_ORDER
 
     @staticmethod
-    def from_channels(name: str, channels: Tuple[CHANNEL_TYPES, ...]) -> "NodeChannel":
+    def from_channels(name: str, channels: tuple[CHANNEL_TYPES, ...]) -> "NodeChannel":
         position_channels = filter_position_channels(channels)
         rotation_channels = filter_rotation_channels(channels)
         return NodeChannel(name, position_channels, rotation_channels)
 
     @staticmethod
     def from_rotation_order(name: str, rotation_order: ROTATION_ORDER, has_position_channels: bool) -> "NodeChannel":
-        position_channels: Tuple[POSITION_CHANNELS, ...] = (
+        position_channels: tuple[POSITION_CHANNELS, ...] = (
             ("Xposition", "Yposition", "Zposition") if has_position_channels else ()
         )
         rotation_channels = _get_rotation_channels_from_order(rotation_order)
         return NodeChannel(name, position_channels, rotation_channels)
 
     @property
-    def channels(self) -> Tuple[CHANNEL_TYPES, ...]:
+    def channels(self) -> tuple[CHANNEL_TYPES, ...]:
         return self.position_channels + self.rotation_channels  # position channels first
 
     @property
@@ -57,7 +56,7 @@ class NodeChannel:
 
 def _get_rotation_channels_from_order(
     rotation_order: ROTATION_ORDER,
-) -> Tuple[ROTATION_CHANNELS, ...]:
+) -> tuple[ROTATION_CHANNELS, ...]:
 
     if rotation_order == "XYZ":
         return "Xrotation", "Yrotation", "Zrotation"
@@ -74,7 +73,7 @@ def _get_rotation_channels_from_order(
 
 
 def _get_rotation_order_from_channels(
-    rotation_channels: Tuple[ROTATION_CHANNELS, ...],
+    rotation_channels: tuple[ROTATION_CHANNELS, ...],
 ) -> ROTATION_ORDER:
 
     if rotation_channels == ("Xrotation", "Yrotation", "Zrotation"):

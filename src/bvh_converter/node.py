@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Optional, Set, List, TypedDict, Literal, Union
+from typing import Optional, TypedDict, Literal
 
 
 RotationOrder = Literal["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"]
@@ -7,7 +7,7 @@ RotationOrder = Literal["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"]
 
 class _RequiredNodeParams(TypedDict):
     name: str
-    parent: Optional[str]
+    parent: str | None
 
 
 class _OptionalNodeParams(_RequiredNodeParams, total=False):
@@ -33,18 +33,18 @@ class Node:
 
     """
 
-    NodeParams = Union[_RequiredNodeParams, _OptionalNodeParams]
+    NodeParams = _RequiredNodeParams | _OptionalNodeParams
 
     def __init__(
         self,
         name: str,
         parent: Optional["Node"] = None,
-        rotation_order: Optional[RotationOrder] = None,
-        offset: Optional[np.ndarray] = None,
+        rotation_order: RotationOrder | None = None,
+        offset: np.ndarray | None = None,
     ):
         self.__name = name
         self.__parent = parent
-        self.__children: List["Node"] = []
+        self.__children: list["Node"] = []
         self.rotation_order = rotation_order if rotation_order else "XYZ"
         self.offset = offset if offset is not None else np.zeros(3)
 
@@ -78,7 +78,7 @@ class Node:
         return not self.__children
 
     @property
-    def children(self) -> List["Node"]:
+    def children(self) -> list["Node"]:
         return self.__children.copy()
 
     @property
@@ -99,7 +99,7 @@ class Node:
             return 0
         return self.__parent.depth + 1
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Node") -> bool:
         return self.__name == other.name
 
     def __repr__(self):

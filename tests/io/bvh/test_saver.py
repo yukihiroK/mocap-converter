@@ -1,7 +1,4 @@
-import pytest
-
 from bvh_converter.io.bvh.saver import BVHSaver
-from bvh_converter.motion_data import MotionData
 from bvh_converter.kinematic_tree import KinematicTree
 
 
@@ -17,8 +14,6 @@ def test_stringify_node_hierarchy():
             {"name": "child5", "parent": "child2"},
         ]
     )
-
-    motion_data = MotionData(kinematic_tree)
 
     saver = BVHSaver(
         rotation_orders={
