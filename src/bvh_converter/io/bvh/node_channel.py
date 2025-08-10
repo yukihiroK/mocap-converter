@@ -12,7 +12,6 @@ from bvh_converter.io.bvh.types import (
 
 @dataclass(frozen=True)
 class NodeChannel:
-
     name: str
     # channels: Tuple[CHANNEL_TYPES, ...]
     position_channels: tuple[POSITION_CHANNELS, ...]
@@ -57,7 +56,6 @@ class NodeChannel:
 def _get_rotation_channels_from_order(
     rotation_order: ROTATION_ORDER,
 ) -> tuple[ROTATION_CHANNELS, ...]:
-
     if rotation_order == "XYZ":
         return "Xrotation", "Yrotation", "Zrotation"
     elif rotation_order == "XZY":
@@ -75,7 +73,6 @@ def _get_rotation_channels_from_order(
 def _get_rotation_order_from_channels(
     rotation_channels: tuple[ROTATION_CHANNELS, ...],
 ) -> ROTATION_ORDER:
-
     if rotation_channels == ("Xrotation", "Yrotation", "Zrotation"):
         return "XYZ"
     elif rotation_channels == ("Xrotation", "Zrotation", "Yrotation"):

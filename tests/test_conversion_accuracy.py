@@ -39,7 +39,10 @@ def test_rot2pos2rot(motion_data: MotionData):
     )
 
     positional_data: MotionData = MotionData(
-        motion_data.kinematic_tree, positions=converted_positions, rotations=None, frame_time=motion_data.frame_time
+        motion_data.kinematic_tree,
+        positions=converted_positions,
+        rotations=None,
+        frame_time=motion_data.frame_time,
     )
 
     # Convert back to rotations
@@ -83,7 +86,10 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     converted_positions: dict[str, np.ndarray] = get_positions_from_rotations(motion_data, root_pos, root_node)
 
     positional_data: MotionData = MotionData(
-        motion_data.kinematic_tree, positions=converted_positions, rotations=None, frame_time=motion_data.frame_time
+        motion_data.kinematic_tree,
+        positions=converted_positions,
+        rotations=None,
+        frame_time=motion_data.frame_time,
     )
 
     # Convert back to rotations

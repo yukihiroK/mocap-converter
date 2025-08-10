@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.node import Node
 from bvh_converter.motion_data import MotionData
+from bvh_converter.node import Node
 
 
 def get_align_rotations(
@@ -85,7 +85,6 @@ def get_rotations_from_positions(
         result.update(r)
 
     elif current_node.children_count > 1:  # Joint has children
-
         actual_offsets = [
             (motion_data.get_positions(child_node.name) - motion_data.get_positions(current_node.name))  # [frame_count]
             for child_node in current_node.children

@@ -32,7 +32,6 @@ def test_kinematic_tree_remove_node():
 
 
 def test_kinematic_tree_from_dict_remove_node():
-
     nodes: list[Node.NodeParams] = [
         {"name": "root", "parent": None},
         {"name": "child1", "parent": "root"},
@@ -74,7 +73,6 @@ def test_kinematic_tree_from_dict_remove_node():
 
 
 def test_kinematic_tree_from_dict_remove_root():
-
     nodes: list[Node.NodeParams] = [
         {"name": "root", "parent": None},
         {"name": "child1", "parent": "root"},
@@ -145,7 +143,12 @@ def test_kinematic_tree_add_node():
     tree.add_node(grandchild1)
 
     assert tree.root == root
-    assert tree.nodes == {"root": root, "child1": child1, "child2": child2, "grandchild1": grandchild1}
+    assert tree.nodes == {
+        "root": root,
+        "child1": child1,
+        "child2": child2,
+        "grandchild1": grandchild1,
+    }
 
     grandchild2 = Node("grandchild2", parent=child1)
     tree.add_node(grandchild2)

@@ -3,7 +3,6 @@ from bvh_converter.kinematic_tree import KinematicTree
 
 
 def test_stringify_node_hierarchy():
-
     kinematic_tree = KinematicTree.from_params(
         [
             {"name": "root", "parent": None},

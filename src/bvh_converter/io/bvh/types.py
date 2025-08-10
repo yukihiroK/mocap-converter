@@ -1,5 +1,4 @@
-from typing import Literal, Tuple
-
+from typing import Literal
 
 NODE_TYPES = Literal["ROOT", "JOINT", "End"]
 
@@ -19,9 +18,13 @@ def validate_channel(channel: str) -> CHANNEL_TYPES:
         raise ValueError(f"Invalid channel: {channel}")
 
 
-def filter_position_channels(channels: Tuple[CHANNEL_TYPES, ...]) -> Tuple[POSITION_CHANNELS, ...]:
+def filter_position_channels(
+    channels: tuple[CHANNEL_TYPES, ...],
+) -> tuple[POSITION_CHANNELS, ...]:
     return tuple([channel for channel in channels if channel in ("Xposition", "Yposition", "Zposition")])
 
 
-def filter_rotation_channels(channels: Tuple[CHANNEL_TYPES, ...]) -> Tuple[ROTATION_CHANNELS, ...]:
+def filter_rotation_channels(
+    channels: tuple[CHANNEL_TYPES, ...],
+) -> tuple[ROTATION_CHANNELS, ...]:
     return tuple([channel for channel in channels if channel in ("Xrotation", "Yrotation", "Zrotation")])

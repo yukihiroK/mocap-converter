@@ -12,7 +12,6 @@ def get_positions_from_rotations(
     accum_rot: R = R.identity(),
     scale: float = 1,
 ) -> dict[str, np.ndarray]:
-
     if not motion_data.has_rotations(current_node.name):
         return {}
 

@@ -15,10 +15,8 @@ class BVHSaver:
     Example:
 
     ```python
-
     saver = BVHSaver()
     saver.save_bvh(motion_data, "example.bvh")
-
     ```
 
     """
@@ -32,7 +30,6 @@ class BVHSaver:
         node: Node,
         indent: str = "  ",
     ) -> list[str]:
-
         node_channel = NodeChannel.from_rotation_order(
             name=node.name,
             has_position_channels=node.is_root,

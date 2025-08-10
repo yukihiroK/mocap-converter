@@ -4,7 +4,6 @@ from bvh_converter.kinematic_tree import KinematicTree
 
 
 class MotionData:
-
     def __init__(
         self,
         kinematic_tree: KinematicTree,

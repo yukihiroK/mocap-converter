@@ -1,13 +1,11 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from typing import List, Dict, Optional, Tuple
-
-from bvh_converter.node import Node
-from bvh_converter.kinematic_tree import KinematicTree
-from bvh_converter.motion_data import MotionData
 from bvh_converter.io.bvh.node_channel import NodeChannel
 from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, validate_channel
+from bvh_converter.kinematic_tree import KinematicTree
+from bvh_converter.motion_data import MotionData
+from bvh_converter.node import Node
 
 
 def load_bvh(filename: str) -> MotionData:
@@ -32,15 +30,15 @@ class BVHLoader:
         pass
 
     def __init_state(self):
-        self.__nodes: Dict[str, Node] = {}
-        self.__current_node: Optional[Node] = None
-        self.__node_stack: List[Node] = []
+        self.__nodes: dict[str, Node] = {}
+        self.__current_node: Node | None = None
+        self.__node_stack: list[Node] = []
 
         self.__channel_count = 0
-        self.__node_channels: List[NodeChannel] = []
+        self.__node_channels: list[NodeChannel] = []
         self.__frame_time = 0.0
-        self.__position_data: Dict[str, List[np.ndarray]] = {}
-        self.__rotation_data: Dict[str, List[np.ndarray]] = {}
+        self.__position_data: dict[str, list[np.ndarray]] = {}
+        self.__rotation_data: dict[str, list[np.ndarray]] = {}
 
     def load_bvh(self, filename: str) -> MotionData:
         self.__init_state()
@@ -115,7 +113,7 @@ class BVHLoader:
 
         self.__push_node(Node(node_name, parent=self.__current_node))
 
-    def __parse_node_offset(self, offset: List[str]):
+    def __parse_node_offset(self, offset: list[str]):
         if self.__current_node is None:
             raise self.ParseError("OFFSET specified before ROOT or JOINT is defined")
 
@@ -126,7 +124,7 @@ class BVHLoader:
 
         self.__current_node.offset = np.array(offset_values)
 
-    def __parse_node_channels(self, channels: List[str]):
+    def __parse_node_channels(self, channels: list[str]):
         if self.__current_node is None:
             raise self.ParseError("CHANNELS specified before ROOT or JOINT is defined")
 
@@ -144,7 +142,7 @@ class BVHLoader:
         if node_channel.has_rotation_channels:
             self.__rotation_data[node_channel.name] = []
 
-    def __parse_motion_data(self, lines: List[str]):
+    def __parse_motion_data(self, lines: list[str]):
         if not self.__nodes:
             raise self.ParseError("No nodes defined before MOTION data")
 
@@ -158,7 +156,7 @@ class BVHLoader:
 
             self.__parse_frame_data(frame_data)
 
-    def __parse_frame_data(self, frame_data: List[str]):
+    def __parse_frame_data(self, frame_data: list[str]):
         try:
             channel_values = tuple(map(float, frame_data))
         except ValueError:
@@ -169,7 +167,6 @@ class BVHLoader:
 
         offset = 0
         for node_channel in self.__node_channels:
-
             values = channel_values[offset : offset + node_channel.channel_count]
             position, rotation = _parse_channel_values(node_channel.channels, values)
 
@@ -207,7 +204,7 @@ def _parse_frame_time(line: str):
     return frame_time
 
 
-def _parse_channel_values(channels: Tuple[CHANNEL_TYPES, ...], values: Tuple[float, ...]) -> Tuple[np.ndarray, R]:
+def _parse_channel_values(channels: tuple[CHANNEL_TYPES, ...], values: tuple[float, ...]) -> tuple[np.ndarray, R]:
     if len(channels) != len(values):
         raise BVHLoader.ParseError("Number of channels and values do not match")
 
