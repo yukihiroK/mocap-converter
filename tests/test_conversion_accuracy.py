@@ -21,7 +21,7 @@ def motion_data(sample_bvh_path: str) -> MotionData:
     return load_bvh(sample_bvh_path)
 
 
-def test_round_trip_conversion(motion_data: MotionData):
+def test_rot2pos2rot(motion_data: MotionData):
     """
     Test the round-trip conversion from rotations to positions and back to rotations.
     This ensures that the conversion maintains the integrity of the motion data.
@@ -65,4 +65,56 @@ def test_round_trip_conversion(motion_data: MotionData):
             )
 
             # Allow for reasonable numerical error
-            assert mean_angle_error < 0.1, f"Angular error for {node_name} too large: {mean_angle_error} rad"
+            assert mean_angle_error < 1e-4, f"Angular error for {node_name} too large: {mean_angle_error} rad"
+
+
+def test_rot2pos2rot2pos(motion_data: MotionData):
+    """
+    Test the round-trip conversion from rotations to positions and back to rotations,
+    and then back to positions, ensuring the final positions match the positions obtained from the original motion data.
+    """
+    print("Testing round-trip conversion to positions...")
+
+    # Get the root node and its initial position
+    root_node = motion_data.kinematic_tree.root
+    assert root_node is not None, "Root node should exist"
+
+    root_pos: np.ndarray = motion_data.get_positions(root_node.name)
+
+    # Convert rotations to positions
+    converted_positions: Dict[str, np.ndarray] = get_positions_from_rotations(motion_data, root_pos, root_node)
+
+    positional_data: MotionData = MotionData(
+        motion_data.kinematic_tree, positions=converted_positions, rotations=None, frame_time=motion_data.frame_time
+    )
+
+    # Convert back to rotations
+    converted_rotations: Dict[str, R] = get_rotations_from_positions(positional_data, root_node)
+
+    rotational_data: MotionData = MotionData(
+        motion_data.kinematic_tree,
+        positions={root_node.name: root_pos},
+        rotations={name: rot.as_quat() for name, rot in converted_rotations.items()},
+        frame_time=motion_data.frame_time,
+    )
+
+    root_pos: np.ndarray = rotational_data.get_positions(root_node.name)
+
+    # Convert back to positions
+    final_positions: Dict[str, np.ndarray] = get_positions_from_rotations(rotational_data, root_pos, root_node)
+
+    # Compare final positions with original positions
+    for node_name, final_position in final_positions.items():
+        first_position: np.ndarray = positional_data.get_positions(node_name)
+
+        # Calculate position error
+        position_errors = np.linalg.norm(final_position - first_position)
+        mean_position_error = np.mean(position_errors)
+        max_position_error = np.max(position_errors)
+
+        print(
+            f"{node_name}: Mean position error: {mean_position_error:.4f}, Max position error: {max_position_error:.4f}"
+        )
+
+        # Allow for reasonable numerical error
+        assert mean_position_error < 1e-4, f"Position error for {node_name} too large: {mean_position_error}"
