@@ -66,7 +66,7 @@ def get_rotations_from_positions(
 
         initial_offset = child_node.offset  # (3,)
         if np.linalg.norm(initial_offset) == 0:  # child_node is an end effector
-            result[current_node.name] = R.identity()
+            result[current_node.name] = R.identity(motion_data.frame_count)
             return result
 
         initial_offset = initial_offset / np.linalg.norm(initial_offset)
@@ -101,6 +101,7 @@ def get_rotations_from_positions(
         rotations = get_align_rotations(
             local_offsets, initial_offsets
         )  # (n_frames, n_children, 3), (n_children, 3) -> (n_frames, 4)
+        result[current_node.name] = rotations
 
         for child_node in current_node.children:
             r = get_rotations_from_positions(
