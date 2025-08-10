@@ -1,12 +1,11 @@
-import pytest
-
-from typing import Generator
 import tempfile
 from pathlib import Path
+from typing import Generator
+
+import pytest
 from scipy.spatial.transform import Rotation as R
 
 from bvh_converter.io.bvh.loader import BVHLoader
-
 
 bvh_content = """
 HIERARCHY
@@ -49,8 +48,8 @@ def create_bvh_file() -> Generator[Path, None, None]:
     path.unlink()
 
 
-def test_bvh_loader(create_bvh_file):
-    filename = create_bvh_file
+def test_bvh_loader(create_bvh_file: Path):
+    filename = str(create_bvh_file)
     loader = BVHLoader()
 
     # Test motion data attributes

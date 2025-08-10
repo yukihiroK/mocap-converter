@@ -44,10 +44,15 @@ class KinematicTree:
             raise cls.NotConnectedError
         root_params = root_nodes[0]
 
-        result = []
+        result: list[Node] = []
 
         def build_tree(node_params: Node.NodeParams) -> Node:
-            node = Node(**{**node_params, "parent": None})
+            node = Node(
+                name=node_params["name"],
+                parent=None,
+                rotation_order=node_params.get("rotation_order"),
+                offset=node_params.get("offset"),
+            )
             result.append(node)
             for child_params in nodes:
                 if child_params.get("parent") == node_params["name"]:

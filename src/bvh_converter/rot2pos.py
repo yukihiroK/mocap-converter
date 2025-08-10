@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
 from .motion_data import MotionData
@@ -7,15 +8,15 @@ from .node import Node
 
 def get_positions_from_rotations(
     motion_data: MotionData,
-    parent_position: np.ndarray,
+    parent_position: NDArray[np.float64],
     current_node: Node,
     accum_rot: R = R.identity(),
     scale: float = 1,
-) -> dict[str, np.ndarray]:
+) -> dict[str, NDArray[np.float64]]:
     if not motion_data.has_rotations(current_node.name):
         return {}
 
-    positions: dict[str, np.ndarray] = {current_node.name: parent_position}
+    positions: dict[str, NDArray[np.float64]] = {current_node.name: parent_position}
     rot_np = motion_data.get_rotations(current_node.name)
     rotation = accum_rot * R.from_quat(rot_np)
 

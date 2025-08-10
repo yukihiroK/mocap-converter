@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
 from bvh_converter.motion_data import MotionData
@@ -6,8 +7,8 @@ from bvh_converter.node import Node
 
 
 def get_align_rotations(
-    local_offsets: np.ndarray,
-    initial_offset: np.ndarray,
+    local_offsets: NDArray[np.float64],
+    initial_offset: NDArray[np.float64],
 ) -> R:
     """
     Align local offsets to initial offsets using R.align_vectors.
@@ -31,9 +32,9 @@ def get_align_rotations(
 
 
 def apply_rotations(
-    rot: np.ndarray,  # (n,4)
-    vec: np.ndarray,  # (n,m,3)
-) -> np.ndarray:  # (n,m,3)
+    rot: NDArray[np.float64],  # (n,4)
+    vec: NDArray[np.float64],  # (n,m,3)
+) -> NDArray[np.float64]:  # (n,m,3)
     """Apply rotations to vectors using quaternion representation.
     Args:
         rot_xyzw: Array of quaternions (shape: (n, 4)).
@@ -58,7 +59,7 @@ def get_rotations_from_positions(
     if accum_rot is None:
         accum_rot = R.identity(motion_data.frame_count)
 
-    result = {}
+    result: dict[str, R] = {}
 
     if current_node.children_count == 1:  # Joint has a child
         child_node = current_node.children[0]

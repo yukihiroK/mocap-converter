@@ -1,11 +1,12 @@
 import numpy as np
+from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.node import Node
-from bvh_converter.kinematic_tree import KinematicTree
-from bvh_converter.motion_data import MotionData
 from bvh_converter.io.bvh.node_channel import NodeChannel
 from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, ROTATION_ORDER
+from bvh_converter.kinematic_tree import KinematicTree
+from bvh_converter.motion_data import MotionData
+from bvh_converter.node import Node
 
 
 class BVHSaver:
@@ -38,7 +39,7 @@ class BVHSaver:
         self.__ordered_node_channels.append(node_channel)
 
         if node.has_children:  # Joint/Root node with children
-            child_content = []
+            child_content: list[str] = []
             for child in node.children:
                 child_lines = self._stringify_nodes_recursive(child, indent)
                 child_content.extend(child_lines)
@@ -104,13 +105,11 @@ class BVHSaver:
 def _get_motion_values(
     node_channels: list[NodeChannel],
     motion_data: MotionData,
-) -> np.ndarray:
+) -> NDArray[np.float64]:
     kinematic_tree = motion_data.kinematic_tree
-    motion_values = []
+    motion_values: list[NDArray[np.float64]] = []
     for node_channel in node_channels:
         node = kinematic_tree.get_node(node_channel.name)
-        if node is None:
-            continue
 
         if node.is_leaf and not node.has_siblings:
             continue
@@ -136,12 +135,12 @@ def _stringify_motion_info(motion_data: MotionData) -> str:
 def _stringify_node(
     node_type: NODE_TYPES,
     node_name: str,
-    offset: np.ndarray,
+    offset: NDArray[np.float64],
     channels: tuple[CHANNEL_TYPES, ...] | None = None,
     children: list[str] | None = None,
     indent: str = "  ",
 ) -> list[str]:
-    lines = []
+    lines: list[str] = []
     if node_type == "End":
         lines.append("End Site")
     else:

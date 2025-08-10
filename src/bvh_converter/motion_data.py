@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 
 from bvh_converter.kinematic_tree import KinematicTree
 
@@ -7,8 +8,8 @@ class MotionData:
     def __init__(
         self,
         kinematic_tree: KinematicTree,
-        positions: dict[str, np.ndarray] | None = None,
-        rotations: dict[str, np.ndarray] | None = None,
+        positions: dict[str, NDArray[np.float64]] | None = None,
+        rotations: dict[str, NDArray[np.float64]] | None = None,
         frame_time: float = 1 / 30,
     ):
         """
@@ -60,13 +61,13 @@ class MotionData:
     def has_rotations(self, name: str) -> bool:
         return name in self.__node_rotations
 
-    def get_positions(self, name: str) -> np.ndarray:
+    def get_positions(self, name: str) -> NDArray[np.float64]:
         return self.__node_positions[name].copy()
 
-    def get_rotations(self, name: str) -> np.ndarray:
+    def get_rotations(self, name: str) -> NDArray[np.float64]:
         return self.__node_rotations[name].copy()
 
-    def set_positions(self, name: str, position: np.ndarray):
+    def set_positions(self, name: str, position: NDArray[np.float64]):
         if position.shape[0] != self.__frame_count:
             raise ValueError(
                 f"Position data for '{name}' must have the same number of frames as other data: {position.shape[0]} frames, expected {self.__frame_count}"
@@ -76,7 +77,7 @@ class MotionData:
 
         self.__node_positions[name] = position.copy()
 
-    def set_rotations(self, name: str, rotation: np.ndarray):
+    def set_rotations(self, name: str, rotation: NDArray[np.float64]):
         if rotation.shape[0] != self.__frame_count:
             raise ValueError(
                 f"Rotation data for '{name}' must have the same number of frames as other data: {rotation.shape[0]} frames, expected {self.__frame_count}"

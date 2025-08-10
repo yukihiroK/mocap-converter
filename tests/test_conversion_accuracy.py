@@ -1,12 +1,14 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
+from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
 from bvh_converter.io.bvh.loader import load_bvh
+from bvh_converter.motion_data import MotionData
 from bvh_converter.pos2rot import get_rotations_from_positions
 from bvh_converter.rot2pos import get_positions_from_rotations
-from bvh_converter.motion_data import MotionData
 
 
 @pytest.fixture
@@ -31,10 +33,10 @@ def test_rot2pos2rot(motion_data: MotionData):
     root_node = motion_data.kinematic_tree.root
     assert root_node is not None, "Root node should exist"
 
-    root_pos: np.ndarray = motion_data.get_positions(root_node.name)
+    root_pos: NDArray[np.float64] = motion_data.get_positions(root_node.name)
 
     # Convert rotations to positions
-    converted_positions: dict[str, np.ndarray] = get_positions_from_rotations(
+    converted_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(
         motion_data, root_pos, root_node, R.identity(), scale=1
     )
 
@@ -80,10 +82,10 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     root_node = motion_data.kinematic_tree.root
     assert root_node is not None, "Root node should exist"
 
-    root_pos: np.ndarray = motion_data.get_positions(root_node.name)
+    root_pos = motion_data.get_positions(root_node.name)
 
     # Convert rotations to positions
-    converted_positions: dict[str, np.ndarray] = get_positions_from_rotations(motion_data, root_pos, root_node)
+    converted_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(motion_data, root_pos, root_node)
 
     positional_data: MotionData = MotionData(
         motion_data.kinematic_tree,
@@ -102,14 +104,14 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
         frame_time=motion_data.frame_time,
     )
 
-    root_pos: np.ndarray = rotational_data.get_positions(root_node.name)
+    root_pos = rotational_data.get_positions(root_node.name)
 
     # Convert back to positions
-    final_positions: dict[str, np.ndarray] = get_positions_from_rotations(rotational_data, root_pos, root_node)
+    final_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(rotational_data, root_pos, root_node)
 
     # Compare final positions with original positions
     for node_name, final_position in final_positions.items():
-        first_position: np.ndarray = positional_data.get_positions(node_name)
+        first_position = positional_data.get_positions(node_name)
 
         # Calculate position error
         position_errors = np.linalg.norm(final_position - first_position)

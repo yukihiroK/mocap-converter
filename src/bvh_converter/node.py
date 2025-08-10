@@ -1,6 +1,7 @@
-import numpy as np
-from typing import Optional, TypedDict, Literal
+from typing import Literal, Optional, TypedDict
 
+import numpy as np
+from numpy.typing import NDArray
 
 RotationOrder = Literal["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"]
 
@@ -12,7 +13,7 @@ class _RequiredNodeParams(TypedDict):
 
 class _OptionalNodeParams(_RequiredNodeParams, total=False):
     rotation_order: RotationOrder
-    offset: np.ndarray
+    offset: NDArray[np.float64]
 
 
 class Node:
@@ -40,7 +41,7 @@ class Node:
         name: str,
         parent: Optional["Node"] = None,
         rotation_order: RotationOrder | None = None,
-        offset: np.ndarray | None = None,
+        offset: NDArray[np.float64] | None = None,
     ):
         self.__name = name
         self.__parent = parent
@@ -99,7 +100,8 @@ class Node:
             return 0
         return self.__parent.depth + 1
 
-    def __eq__(self, other: "Node") -> bool:
+    def __eq__(self, other: object) -> bool:
+        assert isinstance(other, Node), "Can only compare with another Node"
         return self.__name == other.name
 
     def __repr__(self):

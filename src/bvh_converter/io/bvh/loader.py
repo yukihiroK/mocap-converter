@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
 from bvh_converter.io.bvh.node_channel import NodeChannel
@@ -29,7 +30,7 @@ class BVHLoader:
 
         pass
 
-    def __init_state(self):
+    def __init_state(self) -> None:
         self.__nodes: dict[str, Node] = {}
         self.__current_node: Node | None = None
         self.__node_stack: list[Node] = []
@@ -37,8 +38,8 @@ class BVHLoader:
         self.__channel_count = 0
         self.__node_channels: list[NodeChannel] = []
         self.__frame_time = 0.0
-        self.__position_data: dict[str, list[np.ndarray]] = {}
-        self.__rotation_data: dict[str, list[np.ndarray]] = {}
+        self.__position_data: dict[str, list[NDArray[np.float64]]] = {}
+        self.__rotation_data: dict[str, list[NDArray[np.float64]]] = {}
 
     def load_bvh(self, filename: str) -> MotionData:
         self.__init_state()
@@ -69,12 +70,16 @@ class BVHLoader:
                 break
 
         kinematic_tree = KinematicTree(list(self.__nodes.values()))
-        position_data = {name: np.array(positions) for name, positions in self.__position_data.items()}
-        rotation_data = {name: np.array(rotations) for name, rotations in self.__rotation_data.items()}
+        position_data: dict[str, NDArray[np.float64]] = {
+            name: np.array(positions) for name, positions in self.__position_data.items()
+        }
+        rotation_data: dict[str, NDArray[np.float64]] = {
+            name: np.array(rotations) for name, rotations in self.__rotation_data.items()
+        }
 
         return MotionData(kinematic_tree, position_data, rotation_data, self.__frame_time)
 
-    def __push_node(self, node: Node):
+    def __push_node(self, node: Node) -> None:
         if node.name in self.__nodes:
             raise self.ParseError(f"Node with name {node.name} already exists")
 
@@ -85,7 +90,7 @@ class BVHLoader:
             self.__current_node._add_child(node)
         self.__current_node = node
 
-    def __pop_node(self):
+    def __pop_node(self) -> None:
         if not self.__node_stack:
             raise self.ParseError("'}' found without a corresponding node")
 
@@ -124,12 +129,16 @@ class BVHLoader:
 
         self.__current_node.offset = np.array(offset_values)
 
-    def __parse_node_channels(self, channels: list[str]):
+    def __parse_node_channels(self, channels: list[str]) -> None:
         if self.__current_node is None:
             raise self.ParseError("CHANNELS specified before ROOT or JOINT is defined")
 
         try:
-            valid_channels = tuple(map(validate_channel, channels))
+            valid_channels_list: list[CHANNEL_TYPES] = []
+            for channel in channels:
+                validated_channel = validate_channel(channel)
+                valid_channels_list.append(validated_channel)
+            valid_channels = tuple(valid_channels_list)
         except ValueError as e:
             raise self.ParseError(str(e))
 
@@ -156,7 +165,7 @@ class BVHLoader:
 
             self.__parse_frame_data(frame_data)
 
-    def __parse_frame_data(self, frame_data: list[str]):
+    def __parse_frame_data(self, frame_data: list[str]) -> None:
         try:
             channel_values = tuple(map(float, frame_data))
         except ValueError:
@@ -178,7 +187,7 @@ class BVHLoader:
             offset += node_channel.channel_count
 
 
-def _parse_frame_num(line: str):
+def _parse_frame_num(line: str) -> int:
     tokens = line.strip().split()
     if tokens[0] != "Frames:":
         raise BVHLoader.ParseError("The number of frames is not specified")
@@ -204,13 +213,15 @@ def _parse_frame_time(line: str):
     return frame_time
 
 
-def _parse_channel_values(channels: tuple[CHANNEL_TYPES, ...], values: tuple[float, ...]) -> tuple[np.ndarray, R]:
+def _parse_channel_values(
+    channels: tuple[CHANNEL_TYPES, ...], values: tuple[float, ...]
+) -> tuple[NDArray[np.float64], R]:
     if len(channels) != len(values):
         raise BVHLoader.ParseError("Number of channels and values do not match")
 
     position = np.zeros(3)
     rot_order = ""
-    rot_values = []
+    rot_values: list[float] = []
 
     for channel, value in zip(channels, values):
         if channel == "Xposition":
