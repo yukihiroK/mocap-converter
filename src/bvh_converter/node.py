@@ -1,4 +1,7 @@
-from typing import Literal, Optional, TypedDict
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Final, Literal, TypedDict
 
 import numpy as np
 from numpy.typing import NDArray
@@ -8,7 +11,7 @@ RotationOrder = Literal["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"]
 
 class _RequiredNodeParams(TypedDict):
     name: str
-    parent: str | None
+    parent_name: str | None
 
 
 class _OptionalNodeParams(_RequiredNodeParams, total=False):
@@ -16,96 +19,117 @@ class _OptionalNodeParams(_RequiredNodeParams, total=False):
     offset: NDArray[np.float64]
 
 
-class Node:
-    """A node in a kinematic tree, representing a joint or an end effector.
+class _KeepCurrentType:
+    """Sentinel type for representing 'keep current value' in copy_with method."""
 
-    Each node has a name, a parent, and a list of children.
-    The parent and children are other nodes in the tree.
+    def __repr__(self) -> str:
+        return "_KEEP_CURRENT"
+
+
+_KEEP_CURRENT: Final = _KeepCurrentType()
+
+
+@dataclass(frozen=True)
+class Node:
+    """An immutable node in a kinematic tree, representing a joint or an end effector.
+
+    This class uses an immutable design pattern where any modifications return a new
+    instance rather than modifying the existing one. Parent-child relationships are
+    managed by name references rather than direct object references to avoid circular
+    references and maintain immutability.
 
     Attributes:
-        name: The name of the node.
-        parent: The parent node of the node.
-        children: A list of child nodes of the node.
+        name: The unique name of the node.
+        parent_name: The name of the parent node, or None if this is a root node.
+        rotation_order: The order of rotation axes (default: "XYZ").
+        offset: The 3D offset from the parent node (default: zero vector).
 
     Methods:
-        __init__: Initialize the node with a name and an optional parent.
-        _add_child: Add a child node to the node.
-        _remove_child: Remove a child node from the node.
+        copy_with: Create a new node with updated properties.
 
+    Example:
+        >>> root = Node(name="root", parent_name=None)
+        >>> child = Node(name="child", parent_name="root")
+        >>> updated_child = child.copy_with(rotation_order="ZYX")
     """
 
+    name: str
+    parent_name: str | None = None
+    rotation_order: RotationOrder = "XYZ"
+    offset: NDArray[np.float64] = field(default_factory=lambda: np.zeros(3, dtype=np.float64))
+
+    # Type alias for backward compatibility
     NodeParams = _RequiredNodeParams | _OptionalNodeParams
 
-    def __init__(
-        self,
-        name: str,
-        parent: Optional["Node"] = None,
-        rotation_order: RotationOrder | None = None,
-        offset: NDArray[np.float64] | None = None,
-    ):
-        self.__name = name
-        self.__parent = parent
-        self.__children: list["Node"] = []
-        self.rotation_order = rotation_order if rotation_order else "XYZ"
-        self.offset = offset if offset is not None else np.zeros(3)
-
-        if parent is not None:
-            parent._add_child(self)
-
-    def _add_child(self, child: "Node"):
-        if child in self.__children:
-            return
-        self.__children.append(child)
-        child.__parent = self
-
-    def _remove_child(self, child: "Node"):
-        self.__children.remove(child)
-        child.__parent = None
-
-    @property
-    def name(self) -> str:
-        return self.__name
-
-    @property
-    def parent(self) -> Optional["Node"]:
-        return self.__parent
+    def __post_init__(self) -> None:
+        # Ensure offset is a defensive copy and has correct shape
+        if self.offset.shape != (3,):
+            raise ValueError(f"offset must have shape (3,), got {self.offset.shape}")
+        # Create a defensive copy to prevent external mutation
+        object.__setattr__(self, "offset", self.offset.copy())
 
     @property
     def is_root(self) -> bool:
-        return self.__parent is None
+        """True if this node has no parent."""
+        return self.parent_name is None
 
-    @property
-    def is_leaf(self) -> bool:
-        return not self.__children
+    def copy_with(
+        self,
+        *,
+        name: str | None = None,
+        parent_name: str | None | _KeepCurrentType = _KEEP_CURRENT,
+        rotation_order: RotationOrder | None = None,
+        offset: NDArray[np.float64] | None = None,
+    ) -> Node:
+        """Create a new Node with updated properties.
 
-    @property
-    def children(self) -> list["Node"]:
-        return self.__children.copy()
+        Args:
+            name: New name for the node. If None, keeps the current name.
+            parent_name: New parent name. Use None to make it a root node,
+                        or _KEEP_CURRENT to keep current value.
+            rotation_order: New rotation order. If None, keeps current value.
+            offset: New offset vector. If None, keeps current value.
 
-    @property
-    def has_children(self) -> bool:
-        return bool(self.__children)
+        Returns:
+            A new Node instance with the updated properties.
 
-    @property
-    def has_siblings(self) -> bool:
-        return bool(self.__parent) and len(self.__parent.children) > 1
+        Example:
+            >>> node = Node("joint1", "root")
+            >>> updated = node.copy_with(rotation_order="ZYX", parent_name=None)
+        """
+        new_name = name if name is not None else self.name
+        new_parent_name = self.parent_name if isinstance(parent_name, _KeepCurrentType) else parent_name
+        new_rotation_order = rotation_order if rotation_order is not None else self.rotation_order
 
-    @property
-    def children_count(self) -> int:
-        return len(self.__children)
+        if offset is not None:
+            if offset.shape != (3,):
+                raise ValueError(f"offset must have shape (3,), got {offset.shape}")
+            new_offset = offset.copy()
+        else:
+            new_offset = self.offset.copy()  # self.offset is guaranteed to be NDArray after __post_init__
 
-    @property
-    def depth(self) -> int:
-        if self.__parent is None:
-            return 0
-        return self.__parent.depth + 1
+        return Node(
+            name=new_name,
+            parent_name=new_parent_name,
+            rotation_order=new_rotation_order,
+            offset=new_offset,
+        )
 
     def __eq__(self, other: object) -> bool:
-        assert isinstance(other, Node), "Can only compare with another Node"
-        return self.__name == other.name
+        if not isinstance(other, Node):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.parent_name == other.parent_name
+            and self.rotation_order == other.rotation_order
+            and np.array_equal(self.offset, other.offset)  # Both are NDArray after __post_init__
+        )
 
-    def __repr__(self):
-        return f"Node({self.__name})"
+    def __hash__(self) -> int:
+        return hash((self.name, self.parent_name, self.rotation_order, tuple(self.offset)))
 
-    def __str__(self):
-        return self.__name
+    def __repr__(self) -> str:
+        return f"Node(name='{self.name}', parent_name={self.parent_name!r})"
+
+    def __str__(self) -> str:
+        return self.name

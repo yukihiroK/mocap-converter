@@ -32,8 +32,8 @@ class BVHLoader:
 
     def __init_state(self) -> None:
         self.__nodes: dict[str, Node] = {}
-        self.__current_node: Node | None = None
-        self.__node_stack: list[Node] = []
+        self.__current_node_name: str | None = None
+        self.__node_stack: list[str] = []
 
         self.__channel_count = 0
         self.__node_channels: list[NodeChannel] = []
@@ -69,7 +69,7 @@ class BVHLoader:
                 self.__parse_motion_data(lines[i + 1 :])
                 break
 
-        kinematic_tree = KinematicTree(list(self.__nodes.values()))
+        kinematic_tree = KinematicTree.from_nodes(list(self.__nodes.values()))
         position_data: dict[str, NDArray[np.float64]] = {
             name: np.array(positions) for name, positions in self.__position_data.items()
         }
@@ -84,11 +84,8 @@ class BVHLoader:
             raise self.ParseError(f"Node with name {node.name} already exists")
 
         self.__nodes[node.name] = node
-        self.__node_stack.append(node)
-
-        if self.__current_node:
-            self.__current_node._add_child(node)
-        self.__current_node = node
+        self.__node_stack.append(node.name)
+        self.__current_node_name = node.name
 
     def __pop_node(self) -> None:
         if not self.__node_stack:
@@ -96,30 +93,31 @@ class BVHLoader:
 
         self.__node_stack.pop()
         if self.__node_stack:
-            self.__current_node = self.__node_stack[-1]
+            self.__current_node_name = self.__node_stack[-1]
         else:
-            self.__current_node = None
+            self.__current_node_name = None
 
     def __parse_node(self, node_type: NODE_TYPES, node_name: str):
         if node_type == "ROOT" and self.__nodes:
             raise self.ParseError("Multiple ROOT nodes are not allowed")
 
-        elif node_type == "JOINT" and self.__current_node is None:
+        elif node_type == "JOINT" and self.__current_node_name is None:
             raise self.ParseError("JOINT specified before ROOT is defined")
 
         elif node_type == "End":
-            if self.__current_node is None:
+            if self.__current_node_name is None:
                 raise self.ParseError("End node specified before ROOT or JOINT is defined")
 
             if not node_name == "Site":
                 raise self.ParseError(f'"End {node_name}" is not a valid node type (expected "End Site")')
 
-            node_name = f"{self.__current_node.name}_EndSite"
+            node_name = f"{self.__current_node_name}_EndSite"
 
-        self.__push_node(Node(node_name, parent=self.__current_node))
+        parent_name = self.__current_node_name if node_type != "ROOT" else None
+        self.__push_node(Node(name=node_name, parent_name=parent_name))
 
     def __parse_node_offset(self, offset: list[str]):
-        if self.__current_node is None:
+        if self.__current_node_name is None:
             raise self.ParseError("OFFSET specified before ROOT or JOINT is defined")
 
         try:
@@ -127,10 +125,13 @@ class BVHLoader:
         except ValueError:
             raise self.ParseError(f"Invalid OFFSET values: {' '.join(offset)}")
 
-        self.__current_node.offset = np.array(offset_values)
+        # Update the current node with new offset
+        current_node = self.__nodes[self.__current_node_name]
+        updated_node = current_node.copy_with(offset=np.array(offset_values, dtype=np.float64))
+        self.__nodes[self.__current_node_name] = updated_node
 
     def __parse_node_channels(self, channels: list[str]) -> None:
-        if self.__current_node is None:
+        if self.__current_node_name is None:
             raise self.ParseError("CHANNELS specified before ROOT or JOINT is defined")
 
         try:
@@ -142,7 +143,7 @@ class BVHLoader:
         except ValueError as e:
             raise self.ParseError(str(e))
 
-        node_channel = NodeChannel.from_channels(self.__current_node.name, valid_channels)
+        node_channel = NodeChannel.from_channels(self.__current_node_name, valid_channels)
         self.__node_channels.append(node_channel)
         self.__channel_count += node_channel.channel_count
 
@@ -185,19 +186,6 @@ class BVHLoader:
                 self.__rotation_data[node_channel.name].append(rotation.as_quat())  # scalar-last
 
             offset += node_channel.channel_count
-
-
-def _parse_frame_num(line: str) -> int:
-    tokens = line.strip().split()
-    if tokens[0] != "Frames:":
-        raise BVHLoader.ParseError("The number of frames is not specified")
-
-    try:
-        num_frames = int(tokens[1])
-    except ValueError:
-        raise BVHLoader.ParseError(f"Invalid number of frames: {tokens[1]}")
-
-    return num_frames
 
 
 def _parse_frame_time(line: str):

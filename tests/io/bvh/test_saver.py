@@ -1,3 +1,5 @@
+# pyright: reportPrivateUsage=false
+
 from bvh_converter.io.bvh.saver import BVHSaver
 from bvh_converter.kinematic_tree import KinematicTree
 
@@ -5,12 +7,12 @@ from bvh_converter.kinematic_tree import KinematicTree
 def test_stringify_node_hierarchy():
     kinematic_tree = KinematicTree.from_params(
         [
-            {"name": "root", "parent": None},
-            {"name": "child1", "parent": "root"},
-            {"name": "child2", "parent": "root"},
-            {"name": "child3", "parent": "child1"},
-            {"name": "child4", "parent": "child1"},
-            {"name": "child5", "parent": "child2"},
+            {"name": "root", "parent_name": None},
+            {"name": "child1", "parent_name": "root"},
+            {"name": "child2", "parent_name": "root"},
+            {"name": "child3", "parent_name": "child1"},
+            {"name": "child4", "parent_name": "child1"},
+            {"name": "child5", "parent_name": "child2"},
         ]
     )
 

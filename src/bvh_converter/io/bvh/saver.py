@@ -6,7 +6,6 @@ from bvh_converter.io.bvh.node_channel import NodeChannel
 from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, ROTATION_ORDER
 from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData
-from bvh_converter.node import Node
 
 
 class BVHSaver:
@@ -28,9 +27,11 @@ class BVHSaver:
 
     def _stringify_nodes_recursive(
         self,
-        node: Node,
+        tree: KinematicTree,
+        node_name: str,
         indent: str = "  ",
     ) -> list[str]:
+        node = tree.get_node(node_name)
         node_channel = NodeChannel.from_rotation_order(
             name=node.name,
             has_position_channels=node.is_root,
@@ -38,10 +39,11 @@ class BVHSaver:
         )
         self.__ordered_node_channels.append(node_channel)
 
-        if node.has_children:  # Joint/Root node with children
+        children = tree.get_children(node_name)
+        if children:  # Joint/Root node with children
             child_content: list[str] = []
-            for child in node.children:
-                child_lines = self._stringify_nodes_recursive(child, indent)
+            for child in children:
+                child_lines = self._stringify_nodes_recursive(tree, child.name, indent)
                 child_content.extend(child_lines)
 
             node_type = "ROOT" if node.is_root else "JOINT"
@@ -64,7 +66,7 @@ class BVHSaver:
                 indent=indent,
             )
 
-        if node.has_siblings:  # An end-effector with siblings should be a joint node with an end site
+        if tree.has_siblings(node_name):  # An end-effector with siblings should be a joint node with an end site
             return _stringify_node(
                 "JOINT",
                 node.name,
@@ -81,11 +83,12 @@ class BVHSaver:
         self,
         kinematic_tree: KinematicTree,
     ) -> str:
-        if not kinematic_tree.root:
-            raise ValueError("Kinematic tree does not have a node")
+        root = kinematic_tree.root
+        if root is None:
+            raise ValueError("Kinematic tree does not have a root node")
 
         lines = ["HIERARCHY"]
-        lines.extend(self._stringify_nodes_recursive(kinematic_tree.root))
+        lines.extend(self._stringify_nodes_recursive(kinematic_tree, root.name))
         return "\n".join(lines)
 
     def save_bvh(
@@ -109,9 +112,10 @@ def _get_motion_values(
     kinematic_tree = motion_data.kinematic_tree
     motion_values: list[NDArray[np.float64]] = []
     for node_channel in node_channels:
-        node = kinematic_tree.get_node(node_channel.name)
-
-        if node.is_leaf and not node.has_siblings:
+        # Check if this is a leaf node with no siblings through the tree
+        is_leaf = kinematic_tree.is_leaf(node_channel.name)
+        has_siblings = kinematic_tree.has_siblings(node_channel.name)
+        if is_leaf and not has_siblings:
             continue
 
         if node_channel.has_position_channels and motion_data.has_positions(node_channel.name):

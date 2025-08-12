@@ -37,7 +37,7 @@ def test_rot2pos2rot(motion_data: MotionData):
 
     # Convert rotations to positions
     converted_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(
-        motion_data, root_pos, root_node, R.identity(), scale=1
+        motion_data, root_pos, root_node.name, R.identity(), scale=1
     )
 
     positional_data: MotionData = MotionData(
@@ -48,7 +48,7 @@ def test_rot2pos2rot(motion_data: MotionData):
     )
 
     # Convert back to rotations
-    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node)
+    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node.name)
 
     # Compare with original rotations
     for node_name, converted_rotation in converted_rotations.items():
@@ -85,7 +85,9 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     root_pos = motion_data.get_positions(root_node.name)
 
     # Convert rotations to positions
-    converted_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(motion_data, root_pos, root_node)
+    converted_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(
+        motion_data, root_pos, root_node.name
+    )
 
     positional_data: MotionData = MotionData(
         motion_data.kinematic_tree,
@@ -95,7 +97,7 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     )
 
     # Convert back to rotations
-    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node)
+    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node.name)
 
     rotational_data: MotionData = MotionData(
         motion_data.kinematic_tree,
@@ -107,7 +109,9 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     root_pos = rotational_data.get_positions(root_node.name)
 
     # Convert back to positions
-    final_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(rotational_data, root_pos, root_node)
+    final_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(
+        rotational_data, root_pos, root_node.name
+    )
 
     # Compare final positions with original positions
     for node_name, final_position in final_positions.items():

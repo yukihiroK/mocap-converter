@@ -73,10 +73,16 @@ def test_bvh_loader(create_bvh_file: Path):
     assert left_leg_end_site_node is not None
 
     # Test hierarchy
-    assert hips_node.parent is None
-    assert left_up_leg_node.parent == hips_node
-    assert left_leg_node.parent == left_up_leg_node
-    assert left_leg_end_site_node.parent == left_leg_node
+    assert hips_node.parent_name is None
+    assert left_up_leg_node.parent_name == "Hips"
+    assert left_leg_node.parent_name == "LeftUpLeg"
+    assert left_leg_end_site_node.parent_name == "LeftLeg"
+
+    # Test hierarchy through tree
+    assert kinematic_tree.get_parent("Hips") is None
+    assert kinematic_tree.get_parent("LeftUpLeg") == hips_node
+    assert kinematic_tree.get_parent("LeftLeg") == left_up_leg_node
+    assert kinematic_tree.get_parent("LeftLeg_EndSite") == left_leg_node
 
     # Test offsets
     assert hips_node.offset.tolist() == [0.0, 0.0, 0.0]
