@@ -24,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
   "numpy",
-  "scipy",
+  "scipy>=1.15.3",
 ]
 
 [project.urls]
@@ -63,6 +63,8 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.31.1",
     "pytest>=8.3.5",
     "ruff>=0.9.10",
+    "scipy-stubs>=1.15.3",
 ]
