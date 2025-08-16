@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
@@ -8,109 +10,114 @@ from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData
 
 
-class BVHSaver:
+def save_bvh(
+    motion_data: MotionData,
+    filename: str,
+    rotation_orders: dict[str, ROTATION_ORDER] | None = None,
+) -> None:
     """
-    A class for saving BVH files from motion data.
-
+    Save BVH file from motion data.
+    
+    Args:
+        motion_data: MotionData containing kinematic tree and motion information
+        filename: Path to save the BVH file
+        rotation_orders: Optional mapping of node names to rotation orders
+        
     Example:
-
-    ```python
-    saver = BVHSaver()
-    saver.save_bvh(motion_data, "example.bvh")
-    ```
-
+        >>> save_bvh(motion_data, "example.bvh")
+        >>> save_bvh(motion_data, "example.bvh", {"root": "ZXY"})
     """
+    if rotation_orders is None:
+        rotation_orders = {}
+    
+    hierarchy, ordered_node_channels = _build_hierarchy_string(motion_data.kinematic_tree, rotation_orders)
+    motion_info = _build_motion_info_string(motion_data)
+    header = f"{hierarchy}\n{motion_info}"
 
-    def __init__(self, rotation_orders: dict[str, ROTATION_ORDER] = {}):
-        self.rotation_orders = rotation_orders
-        self.__ordered_node_channels: list[NodeChannel] = []
+    motion_values = _extract_motion_values(ordered_node_channels, motion_data)
 
-    def _stringify_nodes_recursive(
-        self,
-        tree: KinematicTree,
-        node_name: str,
-        indent: str = "  ",
-    ) -> list[str]:
-        node = tree.get_node(node_name)
-        node_channel = NodeChannel.from_rotation_order(
-            name=node.name,
-            has_position_channels=node.is_root,
-            rotation_order=self.rotation_orders.get(node.name, "ZXY"),
+    np.savetxt(filename, motion_values, delimiter=" ", header=header, comments="")
+
+def _build_nodes_recursive(
+    tree: KinematicTree,
+    node_name: str,
+    rotation_orders: dict[str, ROTATION_ORDER],
+    ordered_channels: list[NodeChannel],
+    indent: str = "  ",
+) -> list[str]:
+    """Recursively build BVH node strings and track channel order."""
+    node = tree.get_node(node_name)
+    node_channel = NodeChannel.from_rotation_order(
+        name=node.name,
+        has_position_channels=node.is_root,
+        rotation_order=rotation_orders.get(node.name, "ZXY"),
+    )
+    ordered_channels.append(node_channel)
+
+    children = tree.get_children(node_name)
+    if children:  # Joint/Root node with children
+        child_content: list[str] = []
+        for child in children:
+            child_lines = _build_nodes_recursive(tree, child.name, rotation_orders, ordered_channels, indent)
+            child_content.extend(child_lines)
+
+        node_type = "ROOT" if node.is_root else "JOINT"
+
+        return _build_node_string(
+            node_type,
+            node.name,
+            node.offset,
+            node_channel.channels,
+            child_content,
+            indent,
         )
-        self.__ordered_node_channels.append(node_channel)
 
-        children = tree.get_children(node_name)
-        if children:  # Joint/Root node with children
-            child_content: list[str] = []
-            for child in children:
-                child_lines = self._stringify_nodes_recursive(tree, child.name, indent)
-                child_content.extend(child_lines)
+    if node.is_root:  # Root node with no children
+        return _build_node_string(
+            "ROOT",
+            node.name,
+            node.offset,
+            node_channel.channels,
+            indent=indent,
+        )
 
-            node_type = "ROOT" if node.is_root else "JOINT"
+    if tree.has_siblings(node_name):  # An end-effector with siblings should be a joint node with an end site
+        return _build_node_string(
+            "JOINT",
+            node.name,
+            node.offset,
+            node_channel.channels,
+            children=_build_node_string("End", node.name, np.zeros(3), indent=indent),
+            indent=indent,
+        )
 
-            return _stringify_node(
-                node_type,
-                node.name,
-                node.offset,
-                node_channel.channels,
-                child_content,
-                indent,
-            )
-
-        if node.is_root:  # Root node with no children
-            return _stringify_node(
-                "ROOT",
-                node.name,
-                node.offset,
-                node_channel.channels,
-                indent=indent,
-            )
-
-        if tree.has_siblings(node_name):  # An end-effector with siblings should be a joint node with an end site
-            return _stringify_node(
-                "JOINT",
-                node.name,
-                node.offset,
-                node_channel.channels,
-                children=_stringify_node("End", node.name, np.zeros(3), indent=indent),
-                indent=indent,
-            )
-
-        # An end-effector with no siblings should be an end site
-        return _stringify_node("End", node.name, node.offset, indent=indent)
-
-    def _stringify_node_hierarchy(
-        self,
-        kinematic_tree: KinematicTree,
-    ) -> str:
-        root = kinematic_tree.root
-        if root is None:
-            raise ValueError("Kinematic tree does not have a root node")
-
-        lines = ["HIERARCHY"]
-        lines.extend(self._stringify_nodes_recursive(kinematic_tree, root.name))
-        return "\n".join(lines)
-
-    def save_bvh(
-        self,
-        motion_data: MotionData,
-        filename: str,
-    ):
-        hierarchy = self._stringify_node_hierarchy(motion_data.kinematic_tree)
-        motion_info = _stringify_motion_info(motion_data)
-        header = f"{hierarchy}\n{motion_info}"
-
-        motion_values = _get_motion_values(self.__ordered_node_channels, motion_data)
-
-        np.savetxt(filename, motion_values, delimiter=" ", header=header, comments="")
+    # An end-effector with no siblings should be an end site
+    return _build_node_string("End", node.name, node.offset, indent=indent)
 
 
-def _get_motion_values(
+def _build_hierarchy_string(
+    kinematic_tree: KinematicTree,
+    rotation_orders: dict[str, ROTATION_ORDER],
+) -> tuple[str, list[NodeChannel]]:
+    """Build hierarchy string and return ordered node channels."""
+    root = kinematic_tree.root
+    if root is None:
+        raise ValueError("Kinematic tree does not have a root node")
+
+    ordered_node_channels: list[NodeChannel] = []
+    lines = ["HIERARCHY"]
+    lines.extend(_build_nodes_recursive(kinematic_tree, root.name, rotation_orders, ordered_node_channels))
+    return "\n".join(lines), ordered_node_channels
+
+
+def _extract_motion_values(
     node_channels: list[NodeChannel],
     motion_data: MotionData,
 ) -> NDArray[np.float64]:
+    """Extract motion values from motion data based on node channels."""
     kinematic_tree = motion_data.kinematic_tree
     motion_values: list[NDArray[np.float64]] = []
+    
     for node_channel in node_channels:
         # Check if this is a leaf node with no siblings through the tree
         is_leaf = kinematic_tree.is_leaf(node_channel.name)
@@ -123,20 +130,25 @@ def _get_motion_values(
             motion_values.append(positions)
         if node_channel.has_rotation_channels and motion_data.has_rotations(node_channel.name):
             rotations = motion_data.get_rotations(node_channel.name)
-            rotations = R.from_quat(rotations).as_euler(node_channel.rotation_order, degrees=True)  # (frames, 3)
-            motion_values.append(rotations)
+            euler_rotations = R.from_quat(rotations).as_euler(node_channel.rotation_order, degrees=True)  # (frames, 3)
+            motion_values.append(euler_rotations)
 
+    if not motion_values:
+        raise ValueError("No motion data found to save")
+    
     return np.concatenate(motion_values, axis=1)  # (frames, num_channels)
 
 
-def _stringify_motion_info(motion_data: MotionData) -> str:
-    info_str = "MOTION\n"
-    info_str += f"Frames: {motion_data.frame_count}\n"
-    info_str += f"Frame Time: {motion_data.frame_time:.6f}"
-    return info_str
+def _build_motion_info_string(motion_data: MotionData) -> str:
+    """Build motion information string."""
+    return (
+        f"MOTION\n"
+        f"Frames: {motion_data.frame_count}\n"
+        f"Frame Time: {motion_data.frame_time:.6f}"
+    )
 
 
-def _stringify_node(
+def _build_node_string(
     node_type: NODE_TYPES,
     node_name: str,
     offset: NDArray[np.float64],
@@ -144,6 +156,7 @@ def _stringify_node(
     children: list[str] | None = None,
     indent: str = "  ",
 ) -> list[str]:
+    """Build string representation of a single BVH node."""
     lines: list[str] = []
     if node_type == "End":
         lines.append("End Site")

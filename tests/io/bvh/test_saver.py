@@ -1,10 +1,11 @@
 # pyright: reportPrivateUsage=false
 
-from bvh_converter.io.bvh.saver import BVHSaver
+from bvh_converter.io.bvh.saver import _build_hierarchy_string
+from bvh_converter.io.bvh.types import ROTATION_ORDER
 from bvh_converter.kinematic_tree import KinematicTree
 
 
-def test_stringify_node_hierarchy():
+def test_build_hierarchy_string():
     kinematic_tree = KinematicTree.from_params(
         [
             {"name": "root", "parent_name": None},
@@ -16,17 +17,15 @@ def test_stringify_node_hierarchy():
         ]
     )
 
-    saver = BVHSaver(
-        rotation_orders={
-            "root": "ZXY",
-            "child1": "ZXY",
-            "child2": "ZXY",
-            "child3": "ZXY",
-            "child4": "ZXY",
-            "child5": "ZXY",
-        }
-    )
-    hierarchy = saver._stringify_node_hierarchy(kinematic_tree)
+    rotation_orders: dict[str, ROTATION_ORDER] = {
+        "root": "ZXY",
+        "child1": "ZXY",
+        "child2": "ZXY",
+        "child3": "ZXY",
+        "child4": "ZXY",
+        "child5": "ZXY",
+    }
+    hierarchy, _ = _build_hierarchy_string(kinematic_tree, rotation_orders)
 
     expected_hierarchy = """
 HIERARCHY

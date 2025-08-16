@@ -9,194 +9,210 @@ from bvh_converter.motion_data import MotionData
 from bvh_converter.node import Node
 
 
+class ParseError(Exception):
+    """Raised when an error occurs while parsing a BVH file"""
+
+
 def load_bvh(filename: str) -> MotionData:
-    loader = BVHLoader()
-    return loader.load_bvh(filename)
-
-
-class BVHLoader:
     """
-    A class for loading BVH files and extracting motion data from them.
-    
-    Example usage:
+    Load BVH file and extract motion data from it.
 
-    loader = BVHLoader() \\
-    motion_data = loader.load_bvh("example.bvh")
-       
+    Args:
+        filename: Path to the BVH file to load
+
+    Returns:
+        MotionData containing kinematic tree and motion information
+
+    Raises:
+        ParseError: When an error occurs while parsing the BVH file
     """
+    with open(filename, "r") as f:
+        lines = f.readlines()
 
-    class ParseError(Exception):
-        """Raised when an error occurs while parsing a BVH file"""
+    nodes: dict[str, Node] = {}
+    node_stack: list[str] = []
+    current_node_name: str | None = None
+    node_channels: list[NodeChannel] = []
+    channel_count = 0
+    position_values: dict[str, list[NDArray[np.float64]]] = {}
+    rotation_values: dict[str, list[NDArray[np.float64]]] = {}
+    frame_time = 0.0
 
-        pass
+    for i, line in enumerate(lines):
+        tokens = line.strip().split()
 
-    def __init_state(self) -> None:
-        self.__nodes: dict[str, Node] = {}
-        self.__current_node_name: str | None = None
-        self.__node_stack: list[str] = []
+        if not tokens:  # Skip empty lines
+            continue
 
-        self.__channel_count = 0
-        self.__node_channels: list[NodeChannel] = []
-        self.__frame_time = 0.0
-        self.__position_data: dict[str, list[NDArray[np.float64]]] = {}
-        self.__rotation_data: dict[str, list[NDArray[np.float64]]] = {}
+        if tokens[0] in ("ROOT", "JOINT", "End"):
+            node = _parse_node(current_node_name, tokens[0], tokens[1])
+            nodes[node.name] = node
+            node_stack.append(node.name)
+            current_node_name = node.name
 
-    def load_bvh(self, filename: str) -> MotionData:
-        self.__init_state()
+        elif tokens[0] == "OFFSET":
+            if current_node_name is None:
+                raise ParseError("OFFSET specified before ROOT or JOINT is defined")
 
-        with open(filename, "r") as f:
-            lines = f.readlines()
+            node_offset = _parse_node_offset(current_node_name, tokens[1:])
+            current_node = nodes[current_node_name]
+            nodes[current_node_name] = current_node.copy_with(offset=node_offset)
 
-        for i, line in enumerate(lines):
-            tokens = line.strip().split()
+        elif tokens[0] == "}":
+            if not node_stack:
+                raise ParseError("'}' found without a corresponding node")
 
-            if not tokens:  # Skip empty lines
-                continue
+            node_stack.pop()
+            current_node_name = node_stack[-1] if node_stack else None
 
-            if tokens[0] == "ROOT" or tokens[0] == "JOINT" or tokens[0] == "End":
-                self.__parse_node(tokens[0], tokens[1])
+        elif tokens[0] == "CHANNELS":
+            node_channel = _parse_node_channels(current_node_name, tokens[2:])
 
-            elif tokens[0] == "OFFSET":
-                self.__parse_node_offset(tokens[1:])
-
-            elif tokens[0] == "}":
-                self.__pop_node()
-
-            elif tokens[0] == "CHANNELS":
-                self.__parse_node_channels(tokens[2:])
-
-            elif tokens[0] == "MOTION":
-                self.__parse_motion_data(lines[i + 1 :])
-                break
-
-        kinematic_tree = KinematicTree.from_nodes(list(self.__nodes.values()))
-        position_data: dict[str, NDArray[np.float64]] = {
-            name: np.array(positions) for name, positions in self.__position_data.items()
-        }
-        rotation_data: dict[str, NDArray[np.float64]] = {
-            name: np.array(rotations) for name, rotations in self.__rotation_data.items()
-        }
-
-        return MotionData(kinematic_tree, position_data, rotation_data, self.__frame_time)
-
-    def __push_node(self, node: Node) -> None:
-        if node.name in self.__nodes:
-            raise self.ParseError(f"Node with name {node.name} already exists")
-
-        self.__nodes[node.name] = node
-        self.__node_stack.append(node.name)
-        self.__current_node_name = node.name
-
-    def __pop_node(self) -> None:
-        if not self.__node_stack:
-            raise self.ParseError("'}' found without a corresponding node")
-
-        self.__node_stack.pop()
-        if self.__node_stack:
-            self.__current_node_name = self.__node_stack[-1]
-        else:
-            self.__current_node_name = None
-
-    def __parse_node(self, node_type: NODE_TYPES, node_name: str):
-        if node_type == "ROOT" and self.__nodes:
-            raise self.ParseError("Multiple ROOT nodes are not allowed")
-
-        elif node_type == "JOINT" and self.__current_node_name is None:
-            raise self.ParseError("JOINT specified before ROOT is defined")
-
-        elif node_type == "End":
-            if self.__current_node_name is None:
-                raise self.ParseError("End node specified before ROOT or JOINT is defined")
-
-            if not node_name == "Site":
-                raise self.ParseError(f'"End {node_name}" is not a valid node type (expected "End Site")')
-
-            node_name = f"{self.__current_node_name}_EndSite"
-
-        parent_name = self.__current_node_name if node_type != "ROOT" else None
-        self.__push_node(Node(name=node_name, parent_name=parent_name))
-
-    def __parse_node_offset(self, offset: list[str]):
-        if self.__current_node_name is None:
-            raise self.ParseError("OFFSET specified before ROOT or JOINT is defined")
-
-        try:
-            offset_values = tuple(map(float, offset))
-        except ValueError:
-            raise self.ParseError(f"Invalid OFFSET values: {' '.join(offset)}")
-
-        # Update the current node with new offset
-        current_node = self.__nodes[self.__current_node_name]
-        updated_node = current_node.copy_with(offset=np.array(offset_values, dtype=np.float64))
-        self.__nodes[self.__current_node_name] = updated_node
-
-    def __parse_node_channels(self, channels: list[str]) -> None:
-        if self.__current_node_name is None:
-            raise self.ParseError("CHANNELS specified before ROOT or JOINT is defined")
-
-        try:
-            valid_channels_list: list[CHANNEL_TYPES] = []
-            for channel in channels:
-                validated_channel = validate_channel(channel)
-                valid_channels_list.append(validated_channel)
-            valid_channels = tuple(valid_channels_list)
-        except ValueError as e:
-            raise self.ParseError(str(e))
-
-        node_channel = NodeChannel.from_channels(self.__current_node_name, valid_channels)
-        self.__node_channels.append(node_channel)
-        self.__channel_count += node_channel.channel_count
-
-        if node_channel.has_position_channels:
-            self.__position_data[node_channel.name] = []
-        if node_channel.has_rotation_channels:
-            self.__rotation_data[node_channel.name] = []
-
-    def __parse_motion_data(self, lines: list[str]):
-        if not self.__nodes:
-            raise self.ParseError("No nodes defined before MOTION data")
-
-        # num_frames = _parse_frame_num(lines[0])
-        self.__frame_time = _parse_frame_time(lines[1])
-
-        for line in lines[2:]:
-            frame_data = line.strip().split()
-            if not frame_data:
-                continue
-
-            self.__parse_frame_data(frame_data)
-
-    def __parse_frame_data(self, frame_data: list[str]) -> None:
-        try:
-            channel_values = tuple(map(float, frame_data))
-        except ValueError:
-            raise self.ParseError(f"Invalid values in frame data: {' '.join(frame_data)}")
-
-        if len(channel_values) != self.__channel_count:
-            raise self.ParseError(f"Expected {self.__channel_count} channel values, got {len(channel_values)} instead")
-
-        offset = 0
-        for node_channel in self.__node_channels:
-            values = channel_values[offset : offset + node_channel.channel_count]
-            position, rotation = _parse_channel_values(node_channel.channels, values)
+            node_channels.append(node_channel)
+            channel_count += node_channel.channel_count
 
             if node_channel.has_position_channels:
-                self.__position_data[node_channel.name].append(position)
+                position_values[node_channel.name] = []
             if node_channel.has_rotation_channels:
-                self.__rotation_data[node_channel.name].append(rotation.as_quat())  # scalar-last
+                rotation_values[node_channel.name] = []
 
-            offset += node_channel.channel_count
+        elif tokens[0] == "MOTION":
+            if not nodes:
+                raise ParseError("No nodes defined before MOTION data")
+
+            (frame_time, position_values, rotation_values) = _parse_motion_data(
+                channel_count, node_channels, position_values, rotation_values, lines[i + 1 :]
+            )
+            break
+
+    kinematic_tree = KinematicTree.from_nodes(list(nodes.values()))
+    position_data: dict[str, NDArray[np.float64]] = {
+        name: np.array(positions) for name, positions in position_values.items()
+    }
+    rotation_data: dict[str, NDArray[np.float64]] = {
+        name: np.array(rotations) for name, rotations in rotation_values.items()
+    }
+
+    return MotionData(kinematic_tree, position_data, rotation_data, frame_time)
 
 
-def _parse_frame_time(line: str):
+def _parse_node(current_node_name: str | None, node_type: NODE_TYPES, node_name: str) -> Node:
+    """Parse a node declaration and update state."""
+    if node_type == "ROOT" and current_node_name is not None:
+        raise ParseError("Multiple ROOT nodes are not allowed")
+
+    elif node_type == "JOINT" and current_node_name is None:
+        raise ParseError("JOINT specified before ROOT is defined")
+
+    elif node_type == "End":
+        if current_node_name is None:
+            raise ParseError("End node specified before ROOT or JOINT is defined")
+
+        if node_name != "Site":
+            raise ParseError(f'"End {node_name}" is not a valid node type (expected "End Site")')
+
+        node_name = f"{current_node_name}_EndSite"
+
+    parent_name = current_node_name if node_type != "ROOT" else None
+    node = Node(name=node_name, parent_name=parent_name)
+    return node
+
+
+def _parse_node_offset(current_node_name: str | None, offset_tokens: list[str]) -> NDArray[np.float64]:
+    """Parse node offset and update the current node."""
+
+    try:
+        offset_values = tuple(map(float, offset_tokens))
+    except ValueError:
+        raise ParseError(f"Invalid OFFSET values: {' '.join(offset_tokens)}")
+
+    return np.array(offset_values, dtype=np.float64)
+
+
+def _parse_node_channels(current_node_name: str | None, channel_tokens: list[str]) -> NodeChannel:
+    """Parse node channels and update state."""
+    if current_node_name is None:
+        raise ParseError("CHANNELS specified before ROOT or JOINT is defined")
+
+    try:
+        valid_channels_list: list[CHANNEL_TYPES] = []
+        for channel in channel_tokens:
+            validated_channel = validate_channel(channel)
+            valid_channels_list.append(validated_channel)
+        valid_channels = tuple(valid_channels_list)
+    except ValueError as e:
+        raise ParseError(str(e))
+
+    node_channel = NodeChannel.from_channels(current_node_name, valid_channels)
+    return node_channel
+
+
+def _parse_motion_data(
+    channel_count: int,
+    node_channels: list[NodeChannel],
+    position_data: dict[str, list[NDArray[np.float64]]],
+    rotation_data: dict[str, list[NDArray[np.float64]]],
+    lines: list[str],
+) -> tuple[float, dict[str, list[NDArray[np.float64]]], dict[str, list[NDArray[np.float64]]]]:
+    """Parse motion data section."""
+
+    frame_time = _parse_frame_time(lines[1])
+
+    for line in lines[2:]:
+        frame_data = line.strip().split()
+        if not frame_data:
+            continue
+        (position_data, rotation_data) = _parse_frame_data(
+            channel_count, node_channels, position_data, rotation_data, frame_data
+        )
+
+    return (frame_time, position_data, rotation_data)
+
+
+def _parse_frame_data(
+    channel_count: int,
+    node_channels: list[NodeChannel],
+    position_data: dict[str, list[NDArray[np.float64]]],
+    rotation_data: dict[str, list[NDArray[np.float64]]],
+    frame_data: list[str],
+) -> tuple[dict[str, list[NDArray[np.float64]]], dict[str, list[NDArray[np.float64]]]]:
+    """Parse a single frame of motion data."""
+    try:
+        channel_values = tuple(map(float, frame_data))
+    except ValueError:
+        raise ParseError(f"Invalid values in frame data: {' '.join(frame_data)}")
+
+    if len(channel_values) != channel_count:
+        raise ParseError(f"Expected {channel_count} channel values, got {len(channel_values)} instead")
+
+    new_position_data = {name: data.copy() for name, data in position_data.items()}
+    new_rotation_data = {name: data.copy() for name, data in rotation_data.items()}
+
+    offset = 0
+    for node_channel in node_channels:
+        values = channel_values[offset : offset + node_channel.channel_count]
+        position, rotation = _parse_channel_values(node_channel.channels, values)
+
+        if node_channel.has_position_channels:
+            new_position_data[node_channel.name].append(position)
+        if node_channel.has_rotation_channels:
+            new_rotation_data[node_channel.name].append(rotation.as_quat())  # scalar-last
+
+        offset += node_channel.channel_count
+
+    return (new_position_data, new_rotation_data)
+
+
+def _parse_frame_time(line: str) -> float:
+    """Parse frame time from MOTION section."""
     tokens = line.strip().split()
-    if tokens[0] != "Frame" or tokens[1] != "Time:":
-        raise BVHLoader.ParseError("Frame time is not specified")
+    if len(tokens) < 3 or tokens[0] != "Frame" or tokens[1] != "Time:":
+        raise ParseError("Frame time is not specified")
 
     try:
         frame_time = float(tokens[2])
     except ValueError:
-        raise BVHLoader.ParseError(f"Invalid frame time: {tokens[2]}")
+        raise ParseError(f"Invalid frame time: {tokens[2]}")
 
     return frame_time
 
@@ -204,10 +220,11 @@ def _parse_frame_time(line: str):
 def _parse_channel_values(
     channels: tuple[CHANNEL_TYPES, ...], values: tuple[float, ...]
 ) -> tuple[NDArray[np.float64], R]:
+    """Parse channel values into position and rotation data."""
     if len(channels) != len(values):
-        raise BVHLoader.ParseError("Number of channels and values do not match")
+        raise ParseError("Number of channels and values do not match")
 
-    position = np.zeros(3)
+    position = np.zeros(3, dtype=np.float64)
     rot_order = ""
     rot_values: list[float] = []
 

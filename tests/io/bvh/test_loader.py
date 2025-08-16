@@ -5,7 +5,7 @@ from typing import Generator
 import pytest
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.io.bvh.loader import BVHLoader
+from bvh_converter.io.bvh.loader import load_bvh
 
 bvh_content = """
 HIERARCHY
@@ -50,10 +50,9 @@ def create_bvh_file() -> Generator[Path, None, None]:
 
 def test_bvh_loader(create_bvh_file: Path):
     filename = str(create_bvh_file)
-    loader = BVHLoader()
 
     # Test motion data attributes
-    motion_data = loader.load_bvh(filename)
+    motion_data = load_bvh(filename)
     assert motion_data is not None
     assert motion_data.frame_time == 0.033333
 
