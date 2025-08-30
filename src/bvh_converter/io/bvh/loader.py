@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.io.bvh.node_channel import BVHChannelLayout
+from bvh_converter.io.bvh.channel_layout import BVHChannelLayout
 from bvh_converter.io.bvh.types import CHANNEL_TYPES, validate_channel
 from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData

@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.io.bvh.node_channel import BVHChannelLayout
+from bvh_converter.io.bvh.channel_layout import BVHChannelLayout
 from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, ROTATION_ORDER
 from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData
@@ -17,19 +17,19 @@ def save_bvh(
 ) -> None:
     """
     Save BVH file from motion data.
-    
+
     Args:
         motion_data: MotionData containing kinematic tree and motion information
         filename: Path to save the BVH file
         rotation_orders: Optional mapping of node names to rotation orders
-        
+
     Example:
         >>> save_bvh(motion_data, "example.bvh")
         >>> save_bvh(motion_data, "example.bvh", {"root": "ZXY"})
     """
     if rotation_orders is None:
         rotation_orders = {}
-    
+
     hierarchy, ordered_node_channels = _build_hierarchy_string(motion_data.kinematic_tree, rotation_orders)
     motion_info = _build_motion_info_string(motion_data)
     header = f"{hierarchy}\n{motion_info}"
@@ -37,6 +37,7 @@ def save_bvh(
     motion_values = _extract_motion_values(ordered_node_channels, motion_data)
 
     np.savetxt(filename, motion_values, delimiter=" ", header=header, comments="")
+
 
 def _build_nodes_recursive(
     tree: KinematicTree,
@@ -116,7 +117,7 @@ def _extract_motion_values(
     """Extract motion values from motion data based on node channels."""
     kinematic_tree = motion_data.kinematic_tree
     motion_values: list[NDArray[np.float64]] = []
-    
+
     for node_name, channel_layout in node_channels:
         # Check if this is a leaf node with no siblings through the tree
         is_leaf = kinematic_tree.is_leaf(node_name)
@@ -129,22 +130,20 @@ def _extract_motion_values(
             motion_values.append(positions)
         if channel_layout.has_rotation_channels and motion_data.has_rotations(node_name):
             rotations = motion_data.get_rotations(node_name)
-            euler_rotations = R.from_quat(rotations).as_euler(channel_layout.rotation_order, degrees=True)  # (frames, 3)
+            euler_rotations = R.from_quat(rotations).as_euler(
+                channel_layout.rotation_order, degrees=True
+            )  # (frames, 3)
             motion_values.append(euler_rotations)
 
     if not motion_values:
         raise ValueError("No motion data found to save")
-    
+
     return np.concatenate(motion_values, axis=1)  # (frames, num_channels)
 
 
 def _build_motion_info_string(motion_data: MotionData) -> str:
     """Build motion information string."""
-    return (
-        f"MOTION\n"
-        f"Frames: {motion_data.frame_count}\n"
-        f"Frame Time: {motion_data.frame_time:.6f}"
-    )
+    return f"MOTION\n" f"Frames: {motion_data.frame_count}\n" f"Frame Time: {motion_data.frame_time:.6f}"
 
 
 def _build_node_string(
