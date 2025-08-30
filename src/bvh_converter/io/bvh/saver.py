@@ -13,7 +13,7 @@ from bvh_converter.motion_data import MotionData
 def save_bvh(
     motion_data: MotionData,
     filename: str,
-    rotation_orders: dict[str, ROTATION_ORDER] | None = None,
+    channel_layouts: dict[str, BVHChannelLayout] | None = None,
 ) -> None:
     """
     Save BVH file from motion data.
@@ -21,46 +21,62 @@ def save_bvh(
     Args:
         motion_data: MotionData containing kinematic tree and motion information
         filename: Path to save the BVH file
-        rotation_orders: Optional mapping of node names to rotation orders
+        channel_layouts: Optional explicit per-node channels. When absent for a node,
+            a default layout is used: root has XYZ position channels; all non-End nodes have
+            three rotation channels with order "ZXY".
 
     Example:
         >>> save_bvh(motion_data, "example.bvh")
-        >>> save_bvh(motion_data, "example.bvh", {"root": "ZXY"})
+        >>> # Override per-node layout (e.g., root with XYZ positions + ZYX rotations)
+        >>> layout = BVHChannelLayout.from_rotation_order("ZYX", has_position_channels=True)
+        >>> save_bvh(motion_data, "example.bvh", {"Hips": layout})
     """
-    if rotation_orders is None:
-        rotation_orders = {}
+    if channel_layouts is None:
+        channel_layouts = {}
 
-    hierarchy, ordered_node_channels = _build_hierarchy_string(motion_data.kinematic_tree, rotation_orders)
+    hierarchy, node_order = _build_hierarchy_string(motion_data.kinematic_tree, channel_layouts)
     motion_info = _build_motion_info_string(motion_data)
     header = f"{hierarchy}\n{motion_info}"
 
-    motion_values = _extract_motion_values(ordered_node_channels, motion_data)
+    motion_values = _extract_motion_values(node_order, motion_data, channel_layouts)
 
     np.savetxt(filename, motion_values, delimiter=" ", header=header, comments="")
+
+
+def _get_channel_layout_for_node(
+    tree: KinematicTree,
+    node_name: str,
+    channel_layouts: dict[str, BVHChannelLayout],
+) -> BVHChannelLayout:
+    node = tree.get_node(node_name)
+    explicit = channel_layouts.get(node.name)
+    if explicit is not None:
+        return explicit
+
+    return BVHChannelLayout.from_rotation_order(
+        has_position_channels=node.is_root,
+        rotation_order="ZXY",
+    )
 
 
 def _build_nodes_recursive(
     tree: KinematicTree,
     node_name: str,
-    rotation_orders: dict[str, ROTATION_ORDER],
-    ordered_channels: list[tuple[str, BVHChannelLayout]],
+    channel_layouts: dict[str, BVHChannelLayout],
+    node_order: list[str],
     indent: str = "  ",
 ) -> list[str]:
     """Recursively build BVH node strings and track channel order."""
     node = tree.get_node(node_name)
-    channel_layout = BVHChannelLayout.from_rotation_order(
-        has_position_channels=node.is_root,
-        rotation_order=rotation_orders.get(node.name, "ZXY"),
-    )
-    ordered_channels.append((node.name, channel_layout))
+    channel_layout = _get_channel_layout_for_node(tree, node_name, channel_layouts)
+    node_order.append(node.name)
 
     children = tree.get_children(node_name)
     if children:  # Joint/Root node with children
         child_content: list[str] = []
         for child in children:
-            child_lines = _build_nodes_recursive(tree, child.name, rotation_orders, ordered_channels, indent)
+            child_lines = _build_nodes_recursive(tree, child.name, channel_layouts, node_order, indent)
             child_content.extend(child_lines)
-
         node_type = "ROOT" if node.is_root else "JOINT"
 
         return _build_node_string(
@@ -97,38 +113,39 @@ def _build_nodes_recursive(
 
 def _build_hierarchy_string(
     kinematic_tree: KinematicTree,
-    rotation_orders: dict[str, ROTATION_ORDER],
-) -> tuple[str, list[tuple[str, BVHChannelLayout]]]:
-    """Build hierarchy string and return ordered node channels."""
+    channel_layouts: dict[str, BVHChannelLayout],
+) -> tuple[str, list[str]]:
+    """Build hierarchy string and return ordered node names for motion columns."""
     root = kinematic_tree.root
     if root is None:
         raise ValueError("Kinematic tree does not have a root node")
 
-    ordered_node_channels: list[tuple[str, BVHChannelLayout]] = []
+    ordered_node_names: list[str] = []
     lines = ["HIERARCHY"]
-    lines.extend(_build_nodes_recursive(kinematic_tree, root.name, rotation_orders, ordered_node_channels))
-    return "\n".join(lines), ordered_node_channels
+    lines.extend(_build_nodes_recursive(kinematic_tree, root.name, channel_layouts, ordered_node_names))
+    return "\n".join(lines), ordered_node_names
 
 
 def _extract_motion_values(
-    node_channels: list[tuple[str, BVHChannelLayout]],
-    motion_data: MotionData,
+    node_order: list[str], motion_data: MotionData, channel_layouts: dict[str, BVHChannelLayout]
 ) -> NDArray[np.float64]:
     """Extract motion values from motion data based on node channels."""
     kinematic_tree = motion_data.kinematic_tree
     motion_values: list[NDArray[np.float64]] = []
 
-    for node_name, channel_layout in node_channels:
-        # Check if this is a leaf node with no siblings through the tree
-        is_leaf = kinematic_tree.is_leaf(node_name)
-        has_siblings = kinematic_tree.has_siblings(node_name)
-        if is_leaf and not has_siblings:
-            continue
+    for node_name in node_order:
+        channel_layout = _get_channel_layout_for_node(kinematic_tree, node_name, channel_layouts)
 
-        if channel_layout.has_position_channels and motion_data.has_positions(node_name):
+        # Enforce consistency between declared channels and provided data
+        if channel_layout.has_position_channels and not motion_data.has_positions(node_name):
+            raise ValueError(f"Position channels declared for '{node_name}' but no position data present in MotionData")
+        if channel_layout.has_rotation_channels and not motion_data.has_rotations(node_name):
+            raise ValueError(f"Rotation channels declared for '{node_name}' but no rotation data present in MotionData")
+
+        if channel_layout.has_position_channels:
             positions = motion_data.get_positions(node_name)  # (frames, 3)
             motion_values.append(positions)
-        if channel_layout.has_rotation_channels and motion_data.has_rotations(node_name):
+        if channel_layout.has_rotation_channels:
             rotations = motion_data.get_rotations(node_name)
             euler_rotations = R.from_quat(rotations).as_euler(
                 channel_layout.rotation_order, degrees=True
@@ -163,8 +180,9 @@ def _build_node_string(
     lines.append("{")
 
     lines.append(indent + f"OFFSET {offset[0]:.6f} {offset[1]:.6f} {offset[2]:.6f}")
-    if channels and children:
+    if channels:
         lines.append(indent + f"CHANNELS {len(channels)} {' '.join(channels)}")
+    if children:
         lines.extend([indent + line for line in children])
 
     lines.append("}")

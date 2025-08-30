@@ -1,7 +1,7 @@
 # pyright: reportPrivateUsage=false
 
 from bvh_converter.io.bvh.saver import _build_hierarchy_string
-from bvh_converter.io.bvh.types import ROTATION_ORDER
+from bvh_converter.io.bvh.channel_layout import BVHChannelLayout
 from bvh_converter.kinematic_tree import KinematicTree
 
 
@@ -17,15 +17,12 @@ def test_build_hierarchy_string():
         ]
     )
 
-    rotation_orders: dict[str, ROTATION_ORDER] = {
-        "root": "ZXY",
-        "child1": "ZXY",
-        "child2": "ZXY",
-        "child3": "ZXY",
-        "child4": "ZXY",
-        "child5": "ZXY",
+    # Provide explicit channel layouts: root has positions; others rotations only
+    channel_layouts = {
+        name: BVHChannelLayout.from_rotation_order("ZXY", has_position_channels=(name == "root"))
+        for name in ("root", "child1", "child2", "child3", "child4", "child5")
     }
-    hierarchy, _ = _build_hierarchy_string(kinematic_tree, rotation_orders)
+    hierarchy, _ = _build_hierarchy_string(kinematic_tree, channel_layouts)
 
     expected_hierarchy = """
 HIERARCHY
