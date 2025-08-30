@@ -88,7 +88,6 @@ class KinematicTree:
             node = Node(
                 name=params["name"],
                 parent_name=params.get("parent_name"),
-                rotation_order=params.get("rotation_order", "XYZ"),
                 offset=offset,
             )
             nodes.append(node)

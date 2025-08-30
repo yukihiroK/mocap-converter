@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.io.bvh.node_channel import NodeChannel
+from bvh_converter.io.bvh.node_channel import BVHChannelLayout
 from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, ROTATION_ORDER
 from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData
@@ -42,17 +42,16 @@ def _build_nodes_recursive(
     tree: KinematicTree,
     node_name: str,
     rotation_orders: dict[str, ROTATION_ORDER],
-    ordered_channels: list[NodeChannel],
+    ordered_channels: list[tuple[str, BVHChannelLayout]],
     indent: str = "  ",
 ) -> list[str]:
     """Recursively build BVH node strings and track channel order."""
     node = tree.get_node(node_name)
-    node_channel = NodeChannel.from_rotation_order(
-        name=node.name,
+    channel_layout = BVHChannelLayout.from_rotation_order(
         has_position_channels=node.is_root,
         rotation_order=rotation_orders.get(node.name, "ZXY"),
     )
-    ordered_channels.append(node_channel)
+    ordered_channels.append((node.name, channel_layout))
 
     children = tree.get_children(node_name)
     if children:  # Joint/Root node with children
@@ -67,7 +66,7 @@ def _build_nodes_recursive(
             node_type,
             node.name,
             node.offset,
-            node_channel.channels,
+            channel_layout.channels,
             child_content,
             indent,
         )
@@ -77,7 +76,7 @@ def _build_nodes_recursive(
             "ROOT",
             node.name,
             node.offset,
-            node_channel.channels,
+            channel_layout.channels,
             indent=indent,
         )
 
@@ -86,7 +85,7 @@ def _build_nodes_recursive(
             "JOINT",
             node.name,
             node.offset,
-            node_channel.channels,
+            channel_layout.channels,
             children=_build_node_string("End", node.name, np.zeros(3), indent=indent),
             indent=indent,
         )
@@ -98,39 +97,39 @@ def _build_nodes_recursive(
 def _build_hierarchy_string(
     kinematic_tree: KinematicTree,
     rotation_orders: dict[str, ROTATION_ORDER],
-) -> tuple[str, list[NodeChannel]]:
+) -> tuple[str, list[tuple[str, BVHChannelLayout]]]:
     """Build hierarchy string and return ordered node channels."""
     root = kinematic_tree.root
     if root is None:
         raise ValueError("Kinematic tree does not have a root node")
 
-    ordered_node_channels: list[NodeChannel] = []
+    ordered_node_channels: list[tuple[str, BVHChannelLayout]] = []
     lines = ["HIERARCHY"]
     lines.extend(_build_nodes_recursive(kinematic_tree, root.name, rotation_orders, ordered_node_channels))
     return "\n".join(lines), ordered_node_channels
 
 
 def _extract_motion_values(
-    node_channels: list[NodeChannel],
+    node_channels: list[tuple[str, BVHChannelLayout]],
     motion_data: MotionData,
 ) -> NDArray[np.float64]:
     """Extract motion values from motion data based on node channels."""
     kinematic_tree = motion_data.kinematic_tree
     motion_values: list[NDArray[np.float64]] = []
     
-    for node_channel in node_channels:
+    for node_name, channel_layout in node_channels:
         # Check if this is a leaf node with no siblings through the tree
-        is_leaf = kinematic_tree.is_leaf(node_channel.name)
-        has_siblings = kinematic_tree.has_siblings(node_channel.name)
+        is_leaf = kinematic_tree.is_leaf(node_name)
+        has_siblings = kinematic_tree.has_siblings(node_name)
         if is_leaf and not has_siblings:
             continue
 
-        if node_channel.has_position_channels and motion_data.has_positions(node_channel.name):
-            positions = motion_data.get_positions(node_channel.name)  # (frames, 3)
+        if channel_layout.has_position_channels and motion_data.has_positions(node_name):
+            positions = motion_data.get_positions(node_name)  # (frames, 3)
             motion_values.append(positions)
-        if node_channel.has_rotation_channels and motion_data.has_rotations(node_channel.name):
-            rotations = motion_data.get_rotations(node_channel.name)
-            euler_rotations = R.from_quat(rotations).as_euler(node_channel.rotation_order, degrees=True)  # (frames, 3)
+        if channel_layout.has_rotation_channels and motion_data.has_rotations(node_name):
+            rotations = motion_data.get_rotations(node_name)
+            euler_rotations = R.from_quat(rotations).as_euler(channel_layout.rotation_order, degrees=True)  # (frames, 3)
             motion_values.append(euler_rotations)
 
     if not motion_values:

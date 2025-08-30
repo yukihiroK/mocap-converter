@@ -15,7 +15,7 @@ class _RequiredNodeParams(TypedDict):
 
 
 class _OptionalNodeParams(_RequiredNodeParams, total=False):
-    rotation_order: RotationOrder
+    # rotation_order: RotationOrder
     offset: NDArray[np.float64]
 
 
@@ -55,7 +55,7 @@ class Node:
 
     name: str
     parent_name: str | None = None
-    rotation_order: RotationOrder = "XYZ"
+    # rotation_order: RotationOrder = "XYZ"
     offset: NDArray[np.float64] = field(default_factory=lambda: np.zeros(3, dtype=np.float64))
 
     # Type alias for backward compatibility
@@ -78,7 +78,7 @@ class Node:
         *,
         name: str | None = None,
         parent_name: str | None | _KeepCurrentType = _KEEP_CURRENT,
-        rotation_order: RotationOrder | None = None,
+        # rotation_order: RotationOrder | None = None,
         offset: NDArray[np.float64] | None = None,
     ) -> Node:
         """Create a new Node with updated properties.
@@ -99,7 +99,7 @@ class Node:
         """
         new_name = name if name is not None else self.name
         new_parent_name = self.parent_name if isinstance(parent_name, _KeepCurrentType) else parent_name
-        new_rotation_order = rotation_order if rotation_order is not None else self.rotation_order
+        # new_rotation_order = rotation_order if rotation_order is not None else self.rotation_order
 
         if offset is not None:
             if offset.shape != (3,):
@@ -111,7 +111,7 @@ class Node:
         return Node(
             name=new_name,
             parent_name=new_parent_name,
-            rotation_order=new_rotation_order,
+            # rotation_order=new_rotation_order,
             offset=new_offset,
         )
 
@@ -121,12 +121,13 @@ class Node:
         return (
             self.name == other.name
             and self.parent_name == other.parent_name
-            and self.rotation_order == other.rotation_order
+            # and self.rotation_order == other.rotation_order
             and np.array_equal(self.offset, other.offset)  # Both are NDArray after __post_init__
         )
 
     def __hash__(self) -> int:
-        return hash((self.name, self.parent_name, self.rotation_order, tuple(self.offset)))
+        # return hash((self.name, self.parent_name, self.rotation_order, tuple(self.offset)))
+        return hash((self.name, self.parent_name, tuple(self.offset)))  # self.offset is NDArray after __post_init__
 
     def __repr__(self) -> str:
         return f"Node(name='{self.name}', parent_name={self.parent_name!r})"

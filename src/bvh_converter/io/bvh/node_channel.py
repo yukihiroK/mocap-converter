@@ -11,30 +11,28 @@ from bvh_converter.io.bvh.types import (
 
 
 @dataclass(frozen=True)
-class NodeChannel:
-    name: str
-    # channels: Tuple[CHANNEL_TYPES, ...]
+class BVHChannelLayout:
+
     position_channels: tuple[POSITION_CHANNELS, ...]
     rotation_channels: tuple[ROTATION_CHANNELS, ...]
-    # rotation_order: ROTATION_ORDER
 
-    @staticmethod
-    def from_channels(name: str, channels: tuple[CHANNEL_TYPES, ...]) -> "NodeChannel":
+    @classmethod
+    def from_bvh_channels(cls, channels: tuple[CHANNEL_TYPES, ...]) -> "BVHChannelLayout":
         position_channels = filter_position_channels(channels)
         rotation_channels = filter_rotation_channels(channels)
-        return NodeChannel(name, position_channels, rotation_channels)
+        return cls(position_channels, rotation_channels)
 
-    @staticmethod
-    def from_rotation_order(name: str, rotation_order: ROTATION_ORDER, has_position_channels: bool) -> "NodeChannel":
+    @classmethod
+    def from_rotation_order(cls, rotation_order: ROTATION_ORDER, has_position_channels: bool) -> "BVHChannelLayout":
         position_channels: tuple[POSITION_CHANNELS, ...] = (
             ("Xposition", "Yposition", "Zposition") if has_position_channels else ()
         )
         rotation_channels = _get_rotation_channels_from_order(rotation_order)
-        return NodeChannel(name, position_channels, rotation_channels)
+        return cls(position_channels, rotation_channels)
 
     @property
     def channels(self) -> tuple[CHANNEL_TYPES, ...]:
-        return self.position_channels + self.rotation_channels  # position channels first
+        return self.position_channels + self.rotation_channels
 
     @property
     def channel_count(self) -> int:
