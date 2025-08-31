@@ -1,88 +1,127 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import Mapping
+
 import numpy as np
 from numpy.typing import NDArray
 
 from bvh_converter.kinematic_tree import KinematicTree
 
 
+def _freeze_array(a: NDArray[np.float64], *, shape_second: int) -> NDArray[np.float64]:
+    arr = np.asarray(a, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[1] != shape_second:
+        raise ValueError(f"Array must have shape (N, {shape_second}): {arr.shape}")
+    # Mark as read-only to prevent external mutation; zero-copy if already float64
+    arr.setflags(write=False)
+    return arr
+
+
+def _freeze_mapping(
+    data: Mapping[str, NDArray[np.float64]] | None, *, shape_second: int
+) -> MappingProxyType[str, NDArray[np.float64]]:
+    if not data:
+        return MappingProxyType({})
+    frozen: dict[str, NDArray[np.float64]] = {}
+    for name, array in data.items():
+        frozen[name] = _freeze_array(array, shape_second=shape_second)
+    return MappingProxyType(frozen)
+
+
+def _validate_mapping_nodes(
+    tree: KinematicTree, data: Mapping[str, NDArray[np.float64]] | None
+) -> dict[str, NDArray[np.float64]]:
+    """Validate that all mapping keys exist in the kinematic tree.
+
+    Returns a shallow-copied dict to decouple from the caller while keeping
+    array objects for subsequent freezing step.
+    """
+    if not data:
+        return {}
+    for name in data.keys():
+        if name not in tree.nodes:
+            raise KeyError(f"Unknown node '{name}' not found in kinematic tree")
+    return dict(data)
+
+
+def _infer_and_validate_frame_count(
+    pos_map: Mapping[str, NDArray[np.float64]],
+    rot_map: Mapping[str, NDArray[np.float64]],
+) -> int:
+    """Infer frame_count from provided maps and validate consistency across nodes.
+
+    Prefers positions as the primary source when present; falls back to rotations.
+    Raises ValueError when any node's frame count mismatches the inferred value.
+    """
+    frame_count = 0
+    if len(pos_map) > 0:
+        first = next(iter(pos_map.values()))
+        frame_count = first.shape[0]
+        for name, arr in pos_map.items():
+            if arr.shape[0] != frame_count:
+                raise ValueError(f"Position data for '{name}' must have same frames: {arr.shape[0]} vs {frame_count}")
+    if len(rot_map) > 0:
+        if frame_count == 0:
+            first = next(iter(rot_map.values()))
+            frame_count = first.shape[0]
+        for name, arr in rot_map.items():
+            if arr.shape[0] != frame_count:
+                raise ValueError(f"Rotation data for '{name}' must have same frames: {arr.shape[0]} vs {frame_count}")
+    return int(frame_count)
+
+
+@dataclass(frozen=True)
 class MotionData:
+    """Immutable carrier of motion data.
+
+    - positions: per-node arrays of shape (frames, 3), float64
+    - rotations: per-node arrays of shape (frames, 4), float64 (xyzw quaternion)
+    - All arrays are marked read-only; mappings are MappingProxyType
+    """
+
+    kinematic_tree: KinematicTree
+    frame_time: float = 1 / 30
+
+    # Internal immutable state
+    _positions: MappingProxyType[str, NDArray[np.float64]] = field(init=False, repr=False)
+    _rotations: MappingProxyType[str, NDArray[np.float64]] = field(init=False, repr=False)
+    _frame_count: int = field(init=False, repr=False)
+
     def __init__(
         self,
         kinematic_tree: KinematicTree,
-        positions: dict[str, NDArray[np.float64]] | None = None,
-        rotations: dict[str, NDArray[np.float64]] | None = None,
+        positions: Mapping[str, NDArray[np.float64]] | None = None,
+        rotations: Mapping[str, NDArray[np.float64]] | None = None,
         frame_time: float = 1 / 30,
-    ):
-        """
-        A class for storing motion data.
+    ) -> None:
+        object.__setattr__(self, "kinematic_tree", kinematic_tree)
+        object.__setattr__(self, "frame_time", float(frame_time))
 
-        Attributes:
-            kinematic_tree (KinematicTree): The kinematic tree that the motion data is associated with.
-            positions (Optional[Dict[str, np.ndarray]]): A dictionary of position data for each node in the kinematic tree. The keys are node names and the values are numpy arrays of shape (N, 3), where N is the number of frames.
-            rotations (Optional[Dict[str, np.ndarray]]): A dictionary of rotation data for each node in the kinematic tree. The keys are node names and the values are numpy arrays of shape (N, 4), where N is the number of frames. The order of the quaternion elements is (x, y, z, w).
-            frame_time (float): The time between frames in seconds.
-        """
+        validated_positions = _validate_mapping_nodes(kinematic_tree, positions)
+        validated_rotations = _validate_mapping_nodes(kinematic_tree, rotations)
 
-        frame_count = 0
-        if positions:
-            frame_count = len(list(positions.values())[0])
-            for name, position in positions.items():
-                if position.shape[0] != frame_count:
-                    raise ValueError(
-                        f"Position data for '{name}' must have the same number of frames as other data: {position.shape[0]} frames, expected {frame_count}"
-                    )
-                if position.shape[1] != 3:
-                    raise ValueError(f"Position data for '{name}' must have shape (N, 3): {position.shape}")
+        pos_map = _freeze_mapping(validated_positions, shape_second=3)
+        rot_map = _freeze_mapping(validated_rotations, shape_second=4)
+        frame_count = _infer_and_validate_frame_count(pos_map, rot_map)
 
-        if rotations:
-            if frame_count == 0:
-                frame_count = len(list(rotations.values())[0])
-
-            for name, rotation in rotations.items():
-                if rotation.shape[0] != frame_count:
-                    raise ValueError(
-                        f"Rotation data for '{name}' must have the same number of frames as other data: {rotation.shape[0]} frames, expected {frame_count}"
-                    )
-                if rotation.shape[1] != 4:
-                    raise ValueError(f"Rotation data for '{name}' must have shape (N, 4): {rotation.shape}")
-
-        self.kinematic_tree = kinematic_tree
-        self.__node_positions = positions if positions else {}
-        self.__node_rotations = rotations if rotations else {}
-        self.__frame_count = frame_count
-        self.frame_time = frame_time
+        object.__setattr__(self, "_positions", pos_map)
+        object.__setattr__(self, "_rotations", rot_map)
+        object.__setattr__(self, "_frame_count", int(frame_count))
 
     @property
     def frame_count(self) -> int:
-        return self.__frame_count
+        return self._frame_count
 
     def has_positions(self, name: str) -> bool:
-        return name in self.__node_positions
+        return name in self._positions
 
     def has_rotations(self, name: str) -> bool:
-        return name in self.__node_rotations
+        return name in self._rotations
 
     def get_positions(self, name: str) -> NDArray[np.float64]:
-        return self.__node_positions[name].copy()
+        return self._positions[name].copy()
 
     def get_rotations(self, name: str) -> NDArray[np.float64]:
-        return self.__node_rotations[name].copy()
-
-    def set_positions(self, name: str, position: NDArray[np.float64]):
-        if position.shape[0] != self.__frame_count:
-            raise ValueError(
-                f"Position data for '{name}' must have the same number of frames as other data: {position.shape[0]} frames, expected {self.__frame_count}"
-            )
-        if position.shape[1] != 3:
-            raise ValueError(f"Position data for '{name}' must have shape (N, 3): {position.shape}")
-
-        self.__node_positions[name] = position.copy()
-
-    def set_rotations(self, name: str, rotation: NDArray[np.float64]):
-        if rotation.shape[0] != self.__frame_count:
-            raise ValueError(
-                f"Rotation data for '{name}' must have the same number of frames as other data: {rotation.shape[0]} frames, expected {self.__frame_count}"
-            )
-        if rotation.shape[1] != 4:
-            raise ValueError(f"Rotation data for '{name}' must have shape (N, 4): {rotation.shape}")
-
-        self.__node_rotations[name] = rotation.copy()
+        return self._rotations[name].copy()
