@@ -10,6 +10,7 @@ from scipy.spatial.transform import Rotation as R
 from bvh_converter.io.bvh.channel_layout import BVHChannelLayout
 from bvh_converter.io.bvh.saver import _build_hierarchy_string, save_bvh
 from bvh_converter.kinematic_tree import KinematicTree
+from bvh_converter.io.bvh.loader import load_bvh
 from bvh_converter.motion_data import MotionData
 
 
@@ -143,6 +144,47 @@ def test_save_bvh_motion_values() -> None:
 
         assert parsed.shape == expected.shape
         assert np.allclose(parsed, expected, atol=1e-6)
+    finally:
+        try:
+            out_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def test_save_load_roundtrip_with_fixture() -> None:
+    # Locate fixture BVH
+    tests_dir: Path = Path(__file__).resolve().parents[2]
+    fixture_path: Path = tests_dir / "fixtures" / "calibration1.bvh"
+    assert fixture_path.exists(), f"Fixture not found: {fixture_path}"
+
+    # Load original BVH
+    original: MotionData = load_bvh(str(fixture_path))
+
+    # Save to a temp file with defaults (root pos + default rotation order)
+    with tempfile.NamedTemporaryFile(suffix=".bvh", delete=False) as f:
+        out_path: Path = Path(f.name)
+
+    try:
+        save_bvh(original, str(out_path))
+        reloaded: MotionData = load_bvh(str(out_path))
+
+        # Compare frame meta
+        assert reloaded.frame_count == original.frame_count
+        assert abs(reloaded.frame_time - original.frame_time) < 1e-9
+
+        # Compare positions and rotations per node present in original MotionData
+        for node_name in original.kinematic_tree.nodes.keys():
+            if original.has_positions(node_name):
+                pos_orig: NDArray[np.float64] = original.get_positions(node_name)
+                pos_new: NDArray[np.float64] = reloaded.get_positions(node_name)
+                assert pos_orig.shape == pos_new.shape
+                assert np.allclose(pos_orig, pos_new, atol=1e-6)
+
+            if original.has_rotations(node_name):
+                rot_orig: NDArray[np.float64] = original.get_rotations(node_name)
+                rot_new: NDArray[np.float64] = reloaded.get_rotations(node_name)
+                assert rot_orig.shape == rot_new.shape
+                assert np.allclose(rot_orig, rot_new, atol=1e-6)
     finally:
         try:
             out_path.unlink()
