@@ -69,11 +69,11 @@ def _build_nodes_recursive(
     """Recursively build BVH node strings and track channel order."""
     node = tree.get_node(node_name)
     channel_layout = _get_channel_layout_for_node(tree, node_name, channel_layouts)
-    node_order.append(node.name)
 
     children = tree.get_children(node_name)
     if children:  # Joint/Root node with children
         child_content: list[str] = []
+        node_order.append(node.name)
         for child in children:
             child_lines = _build_nodes_recursive(tree, child.name, channel_layouts, node_order, indent)
             child_content.extend(child_lines)
@@ -89,6 +89,7 @@ def _build_nodes_recursive(
         )
 
     if node.is_root:  # Root node with no children
+        node_order.append(node.name)
         return _build_node_string(
             "ROOT",
             node.name,
@@ -97,7 +98,9 @@ def _build_nodes_recursive(
             indent=indent,
         )
 
-    if tree.has_siblings(node_name):  # An end-effector with siblings should be a joint node with an end site
+    # Non-root node with no children
+    if tree.has_siblings(node_name):
+        node_order.append(node.name)
         return _build_node_string(
             "JOINT",
             node.name,
@@ -107,7 +110,7 @@ def _build_nodes_recursive(
             indent=indent,
         )
 
-    # An end-effector with no siblings should be an end site
+    # An end-effector with no siblings should be an End Site
     return _build_node_string("End", node.name, node.offset, indent=indent)
 
 
