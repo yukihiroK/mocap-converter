@@ -125,3 +125,58 @@ class MotionData:
 
     def get_rotations(self, name: str) -> NDArray[np.float64]:
         return self._rotations[name].copy()
+
+    @property
+    def positions(self) -> Mapping[str, NDArray[np.float64]]:
+        """Read-only mapping of all node positions (frames x 3). Arrays are write-protected."""
+        return self._positions
+
+    @property
+    def rotations(self) -> Mapping[str, NDArray[np.float64]]:
+        """Read-only mapping of all node rotations (frames x 4, quaternion xyzw). Arrays are write-protected."""
+        return self._rotations
+
+    def copy_with(
+        self,
+        *,
+        positions: Mapping[str, NDArray[np.float64]] | None = None,
+        rotations: Mapping[str, NDArray[np.float64]] | None = None,
+        frame_time: float | None = None,
+    ) -> "MotionData":
+        """Create a new MotionData with updated properties.
+
+        Semantics:
+        - positions=None keeps current positions; pass an empty dict to remove all positions.
+        - rotations=None keeps current rotations; pass an empty dict to remove all rotations.
+        - frame_time=None keeps the current frame_time.
+        """
+        # Fast path: no changes requested
+        if positions is None and rotations is None and frame_time is None:
+            return self
+
+        # Prepare positions
+        if positions is None:
+            new_pos_map: Mapping[str, NDArray[np.float64]] = self._positions
+        else:
+            validated_positions = _validate_mapping_nodes(self.kinematic_tree, positions)
+            new_pos_map = _freeze_mapping(validated_positions, shape_second=3)
+
+        # Prepare rotations
+        if rotations is None:
+            new_rot_map: Mapping[str, NDArray[np.float64]] = self._rotations
+        else:
+            validated_rotations = _validate_mapping_nodes(self.kinematic_tree, rotations)
+            new_rot_map = _freeze_mapping(validated_rotations, shape_second=4)
+
+        # Validate combined frame count
+        _ = _infer_and_validate_frame_count(new_pos_map, new_rot_map)
+
+        new_frame_time = self.frame_time if frame_time is None else float(frame_time)
+
+        # Construct a fresh MotionData
+        return MotionData(
+            self.kinematic_tree,
+            positions=new_pos_map,
+            rotations=new_rot_map,
+            frame_time=new_frame_time,
+        )
