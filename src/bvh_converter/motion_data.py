@@ -120,12 +120,6 @@ class MotionData:
     def has_rotations(self, name: str) -> bool:
         return name in self._rotations
 
-    def get_positions(self, name: str) -> NDArray[np.float64]:
-        return self._positions[name].copy()
-
-    def get_rotations(self, name: str) -> NDArray[np.float64]:
-        return self._rotations[name].copy()
-
     @property
     def positions(self) -> Mapping[str, NDArray[np.float64]]:
         """Read-only mapping of all node positions (frames x 3). Arrays are write-protected."""

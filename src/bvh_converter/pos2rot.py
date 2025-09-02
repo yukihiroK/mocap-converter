@@ -65,7 +65,7 @@ def get_rotations_from_positions(
 
     if children_count == 1:  # Joint has a child
         child_node = children[0]
-        actual_offsets = motion_data.get_positions(child_node.name) - motion_data.get_positions(current_node_name)
+        actual_offsets = motion_data.positions[child_node.name] - motion_data.positions[current_node_name]
 
         initial_offset = child_node.offset  # (3,)
         if np.linalg.norm(initial_offset) == 0:  # child_node is an end effector
@@ -89,7 +89,7 @@ def get_rotations_from_positions(
 
     elif children_count > 1:  # Joint has children
         actual_offsets = [
-            (motion_data.get_positions(child_node.name) - motion_data.get_positions(current_node_name))
+            (motion_data.positions[child_node.name] - motion_data.positions[current_node_name])
             for child_node in children
         ]  # (n_children, n_frames, 3)
         initial_offsets = np.array([child_node.offset for child_node in children])  # (n_children, 3)

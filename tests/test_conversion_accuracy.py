@@ -33,7 +33,7 @@ def test_rot2pos2rot(motion_data: MotionData):
     root_node = motion_data.kinematic_tree.root
     assert root_node is not None, "Root node should exist"
 
-    root_pos: NDArray[np.float64] = motion_data.get_positions(root_node.name)
+    root_pos: NDArray[np.float64] = motion_data.positions[root_node.name]
 
     # Convert rotations to positions
     converted_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(
@@ -53,7 +53,7 @@ def test_rot2pos2rot(motion_data: MotionData):
     # Compare with original rotations
     for node_name, converted_rotation in converted_rotations.items():
         if motion_data.has_rotations(node_name):
-            original_rotation: R = R.from_quat(motion_data.get_rotations(node_name))
+            original_rotation: R = R.from_quat(motion_data.rotations[node_name])
 
             # Calculate relative rotation
             relative_rots: R = converted_rotation * original_rotation.inv()
@@ -82,7 +82,7 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     root_node = motion_data.kinematic_tree.root
     assert root_node is not None, "Root node should exist"
 
-    root_pos = motion_data.get_positions(root_node.name)
+    root_pos = motion_data.positions[root_node.name]
 
     # Convert rotations to positions
     converted_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(
@@ -106,7 +106,7 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
         frame_time=motion_data.frame_time,
     )
 
-    root_pos = rotational_data.get_positions(root_node.name)
+    root_pos = rotational_data.positions[root_node.name]
 
     # Convert back to positions
     final_positions: dict[str, NDArray[np.float64]] = get_positions_from_rotations(
@@ -115,7 +115,7 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
 
     # Compare final positions with original positions
     for node_name, final_position in final_positions.items():
-        first_position = positional_data.get_positions(node_name)
+        first_position = positional_data.positions[node_name]
 
         # Calculate position error
         position_errors = np.linalg.norm(final_position - first_position)

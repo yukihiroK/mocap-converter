@@ -175,14 +175,14 @@ def test_save_load_roundtrip_with_fixture() -> None:
         # Compare positions and rotations per node present in original MotionData
         for node_name in original.kinematic_tree.nodes.keys():
             if original.has_positions(node_name):
-                pos_orig: NDArray[np.float64] = original.get_positions(node_name)
-                pos_new: NDArray[np.float64] = reloaded.get_positions(node_name)
+                pos_orig: NDArray[np.float64] = original.positions[node_name]
+                pos_new: NDArray[np.float64] = reloaded.positions[node_name]
                 assert pos_orig.shape == pos_new.shape
                 assert np.allclose(pos_orig, pos_new, atol=1e-6)
 
             if original.has_rotations(node_name):
-                rot_orig: NDArray[np.float64] = original.get_rotations(node_name)
-                rot_new: NDArray[np.float64] = reloaded.get_rotations(node_name)
+                rot_orig: NDArray[np.float64] = original.rotations[node_name]
+                rot_new: NDArray[np.float64] = reloaded.rotations[node_name]
                 assert rot_orig.shape == rot_new.shape
                 assert np.allclose(rot_orig, rot_new, atol=1e-6)
     finally:

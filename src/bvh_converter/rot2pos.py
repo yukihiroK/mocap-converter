@@ -16,7 +16,7 @@ def get_positions_from_rotations(
         return {}
 
     positions: dict[str, NDArray[np.float64]] = {current_node_name: parent_position}
-    rot_np = motion_data.get_rotations(current_node_name)
+    rot_np = motion_data.rotations[current_node_name]
     rotation = accum_rot * R.from_quat(rot_np)
 
     tree = motion_data.kinematic_tree

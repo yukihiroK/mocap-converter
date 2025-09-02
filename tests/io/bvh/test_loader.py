@@ -90,28 +90,28 @@ def test_bvh_loader(create_bvh_file: Path):
     assert left_leg_end_site_node.offset.tolist() == [0.0, 0.0, 1.0]
 
     # Test hip positions
-    hip_positions = motion_data.get_positions("Hips")
+    hip_positions = motion_data.positions["Hips"]
     assert hip_positions.shape == (2, 3)
     assert hip_positions[0].tolist() == [0.0, 0.1, 0.2]
     assert hip_positions[1].tolist() == [0.1, 0.2, 0.3]
 
     # Test hip rotations
     test_rot = R.from_euler("ZXY", [[0.0, 0.0, 0.0], [0.0, 180.0, 0.0]], degrees=True).as_quat()
-    hip_rotations = motion_data.get_rotations("Hips")
+    hip_rotations = motion_data.rotations["Hips"]
     assert hip_rotations.shape == (2, 4)
     assert hip_rotations[0].tolist() == test_rot[0].tolist()
     assert hip_rotations[1].tolist() == test_rot[1].tolist()
 
     # Test left up leg rotations
     test_rot = R.from_euler("ZXY", [[90.0, 0.0, 90.0], [45.0, 0.0, 45.0]], degrees=True).as_quat()
-    left_up_leg_rotations = motion_data.get_rotations("LeftUpLeg")
+    left_up_leg_rotations = motion_data.rotations["LeftUpLeg"]
     assert left_up_leg_rotations.shape == (2, 4)
     assert left_up_leg_rotations[0].tolist() == test_rot[0].tolist()
     assert left_up_leg_rotations[1].tolist() == test_rot[1].tolist()
 
     # Test left leg rotations
     test_rot = R.from_euler("ZXY", [[180.0, 90.0, 0.0], [90.0, 45.0, 0.0]], degrees=True).as_quat()
-    left_leg_rotations = motion_data.get_rotations("LeftLeg")
+    left_leg_rotations = motion_data.rotations["LeftLeg"]
     assert left_leg_rotations.shape == (2, 4)
     assert left_leg_rotations[0].tolist() == test_rot[0].tolist()
     assert left_leg_rotations[1].tolist() == test_rot[1].tolist()

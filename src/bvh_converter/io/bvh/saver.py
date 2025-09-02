@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
 from bvh_converter.io.bvh.channel_layout import BVHChannelLayout
-from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES, ROTATION_ORDER
+from bvh_converter.io.bvh.types import CHANNEL_TYPES, NODE_TYPES
 from bvh_converter.kinematic_tree import KinematicTree
 from bvh_converter.motion_data import MotionData
 
@@ -146,10 +146,10 @@ def _extract_motion_values(
             raise ValueError(f"Rotation channels declared for '{node_name}' but no rotation data present in MotionData")
 
         if channel_layout.has_position_channels:
-            positions = motion_data.get_positions(node_name)  # (frames, 3)
+            positions = motion_data.positions[node_name]  # (frames, 3)
             motion_values.append(positions)
         if channel_layout.has_rotation_channels:
-            rotations = motion_data.get_rotations(node_name)
+            rotations = motion_data.rotations[node_name]
             euler_rotations = R.from_quat(rotations).as_euler(
                 channel_layout.rotation_order, degrees=True
             )  # (frames, 3)
