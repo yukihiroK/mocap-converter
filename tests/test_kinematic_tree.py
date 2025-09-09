@@ -1,7 +1,7 @@
 import pytest
 
-from bvh_converter.node import Node
-from bvh_converter.kinematic_tree import KinematicTree
+from mocap_converter.node import Node
+from mocap_converter.kinematic_tree import KinematicTree
 
 
 def test_kinematic_tree_remove_node():

@@ -6,11 +6,11 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.io.bvh.channel_layout import BVHChannelLayout
-from bvh_converter.io.bvh.types import CHANNEL_TYPES, validate_channel
-from bvh_converter.kinematic_tree import KinematicTree
-from bvh_converter.motion_data import MotionData
-from bvh_converter.node import Node
+from mocap_converter.io.bvh.channel_layout import BVHChannelLayout
+from mocap_converter.io.bvh.types import CHANNEL_TYPES, validate_channel
+from mocap_converter.kinematic_tree import KinematicTree
+from mocap_converter.motion_data import MotionData
+from mocap_converter.node import Node
 
 
 # === Immutable Data Structures ===

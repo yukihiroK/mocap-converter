@@ -5,10 +5,10 @@ import pytest
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.io.bvh.loader import load_bvh
-from bvh_converter.motion_data import MotionData
-from bvh_converter.pos2rot import get_rotations_from_positions
-from bvh_converter.rot2pos import get_positions_from_rotations
+from mocap_converter.io.bvh.loader import load_bvh
+from mocap_converter.motion_data import MotionData
+from mocap_converter.pos2rot import get_rotations_from_positions
+from mocap_converter.rot2pos import get_positions_from_rotations
 
 
 @pytest.fixture

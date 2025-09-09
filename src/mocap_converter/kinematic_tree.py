@@ -5,7 +5,7 @@ from functools import cached_property
 
 import numpy as np
 
-from bvh_converter.node import Node
+from mocap_converter.node import Node
 
 
 @dataclass(frozen=True)

@@ -19,7 +19,7 @@ wheels = [
 ]
 
 [[package]]
-name = "bvh-converter"
+name = "mocap-converter"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },

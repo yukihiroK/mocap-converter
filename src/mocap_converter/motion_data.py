@@ -7,7 +7,7 @@ from typing import Mapping
 import numpy as np
 from numpy.typing import NDArray
 
-from bvh_converter.kinematic_tree import KinematicTree
+from mocap_converter.kinematic_tree import KinematicTree
 
 
 def _freeze_array(a: NDArray[np.float64], *, shape_second: int) -> NDArray[np.float64]:

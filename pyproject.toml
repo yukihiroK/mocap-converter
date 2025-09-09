@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "bvh-converter"
+name = "mocap-converter"
 dynamic = ["version"]
 description = ''
 readme = "README.md"
@@ -27,31 +27,31 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/yukihiroK/bvh-converter#readme"
-Issues = "https://github.com/yukihiroK/bvh-converter/issues"
-Source = "https://github.com/yukihiroK/bvh-converter"
+Documentation = "https://github.com/yukihiroK/mocap-converter#readme"
+Issues = "https://github.com/yukihiroK/mocap-converter/issues"
+Source = "https://github.com/yukihiroK/mocap-converter"
 
 [tool.hatch.version]
-path = "src/bvh_converter/__about__.py"
+path = "src/mocap_converter/__about__.py"
 
 [tool.hatch.envs.types]
 extra-dependencies = [
   "mypy>=1.0.0",
 ]
 [tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/bvh_converter tests}"
+check = "mypy --install-types --non-interactive {args:src/mocap_converter tests}"
 
 [tool.coverage.run]
-source_pkgs = ["bvh_converter", "tests"]
+source_pkgs = ["mocap_converter", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/bvh_converter/__about__.py",
+  "src/mocap_converter/__about__.py",
 ]
 
 [tool.coverage.paths]
-bvh_converter = ["src/bvh_converter", "*/bvh-converter/src/bvh_converter"]
-tests = ["tests", "*/bvh-converter/tests"]
+mocap_converter = ["src/mocap_converter", "*/mocap-converter/src/mocap_converter"]
+tests = ["tests", "*/mocap-converter/tests"]
 
 [tool.coverage.report]
 exclude_lines = [

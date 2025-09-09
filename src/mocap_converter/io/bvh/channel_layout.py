@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from bvh_converter.io.bvh.types import (
+from mocap_converter.io.bvh.types import (
     CHANNEL_TYPES,
     POSITION_CHANNELS,
     ROTATION_CHANNELS,

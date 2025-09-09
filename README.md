@@ -1,7 +1,7 @@
-# bvh-converter
+# mocap-converter
 
-[![PyPI - Version](https://img.shields.io/pypi/v/bvh-converter.svg)](https://pypi.org/project/bvh-converter)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bvh-converter.svg)](https://pypi.org/project/bvh-converter)
+[![PyPI - Version](https://img.shields.io/pypi/v/mocap-converter.svg)](https://pypi.org/project/mocap-converter)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mocap-converter.svg)](https://pypi.org/project/mocap-converter)
 
 -----
 
@@ -13,9 +13,9 @@
 ## Installation
 
 ```console
-pip install bvh-converter
+pip install mocap-converter
 ```
 
 ## License
 
-`bvh-converter` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
+`mocap-converter` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

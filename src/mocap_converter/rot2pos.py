@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from .motion_data import MotionData
+from mocap_converter.motion_data import MotionData
 
 
 def get_positions_from_rotations(
@@ -55,3 +55,4 @@ def get_positions_from_rotations(
             positions.update(r)
 
     return positions
+

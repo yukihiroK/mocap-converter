@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.motion_data import MotionData
+from mocap_converter.motion_data import MotionData
 
 
 def get_align_rotations(

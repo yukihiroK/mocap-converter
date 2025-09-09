@@ -5,7 +5,7 @@ from typing import Generator
 import pytest
 from scipy.spatial.transform import Rotation as R
 
-from bvh_converter.io.bvh.loader import load_bvh
+from mocap_converter.io.bvh.loader import load_bvh
 
 bvh_content = """
 HIERARCHY
