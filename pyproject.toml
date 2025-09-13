@@ -9,6 +9,7 @@ description = "Motion capture conversion utilities."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["mocap", "bvh", "motion-capture", "kinect"]
 authors = [
   { name = "yukihiroK", email = "57009247+yukihiroK@users.noreply.github.com" },
