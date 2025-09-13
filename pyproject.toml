@@ -1,69 +1,42 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "mocap-converter"
 dynamic = ["version"]
-description = ''
+description = "Motion capture conversion utilities."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-keywords = []
+keywords = ["mocap", "bvh", "motion-capture", "kinect"]
 authors = [
   { name = "yukihiroK", email = "57009247+yukihiroK@users.noreply.github.com" },
 ]
 classifiers = [
-  "Development Status :: 4 - Beta",
-  "Programming Language :: Python",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy",
+  "Typing :: Typed",
+  "Operating System :: OS Independent",
 ]
 dependencies = [
-  "numpy",
+  "numpy>=1.23.5",
   "scipy>=1.15.3",
 ]
 
 [project.urls]
-Documentation = "https://github.com/yukihiroK/mocap-converter#readme"
-Issues = "https://github.com/yukihiroK/mocap-converter/issues"
 Source = "https://github.com/yukihiroK/mocap-converter"
+Issues = "https://github.com/yukihiroK/mocap-converter/issues"
 
 [tool.hatch.version]
-path = "src/mocap_converter/__about__.py"
-
-[tool.hatch.envs.types]
-extra-dependencies = [
-  "mypy>=1.0.0",
-]
-[tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/mocap_converter tests}"
-
-[tool.coverage.run]
-source_pkgs = ["mocap_converter", "tests"]
-branch = true
-parallel = true
-omit = [
-  "src/mocap_converter/__about__.py",
-]
-
-[tool.coverage.paths]
-mocap_converter = ["src/mocap_converter", "*/mocap-converter/src/mocap_converter"]
-tests = ["tests", "*/mocap-converter/tests"]
-
-[tool.coverage.report]
-exclude_lines = [
-  "no cov",
-  "if __name__ == .__main__.:",
-  "if TYPE_CHECKING:",
-]
+source = "vcs"
 
 [dependency-groups]
 dev = [
-    "basedpyright>=1.31.1",
-    "pytest>=8.3.5",
-    "ruff>=0.9.10",
-    "scipy-stubs>=1.15.3",
+  "basedpyright>=1.31.1",
+  "pytest>=8.3.5",
+  "ruff>=0.9.10",
+  "scipy-stubs>=1.15.3",
 ]
