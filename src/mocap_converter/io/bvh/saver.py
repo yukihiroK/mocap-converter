@@ -163,7 +163,7 @@ def _extract_motion_values(
 
 def _build_motion_info_string(motion_data: MotionData) -> str:
     """Build motion information string."""
-    return f"MOTION\n" f"Frames: {motion_data.frame_count}\n" f"Frame Time: {motion_data.frame_time:.6f}"
+    return f"MOTION\nFrames: {motion_data.frame_count}\nFrame Time: {motion_data.frame_time:.6f}"
 
 
 def _build_node_string(

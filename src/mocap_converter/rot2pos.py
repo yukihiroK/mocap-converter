@@ -55,4 +55,3 @@ def get_positions_from_rotations(
             positions.update(r)
 
     return positions
-

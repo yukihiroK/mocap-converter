@@ -14,7 +14,6 @@ from mocap_converter.io.bvh.types import (
 
 @dataclass(frozen=True)
 class BVHChannelLayout:
-
     position_channels: tuple[POSITION_CHANNELS, ...]
     rotation_channels: tuple[ROTATION_CHANNELS, ...]
 
@@ -25,9 +24,7 @@ class BVHChannelLayout:
         return cls(position_channels, rotation_channels)
 
     @classmethod
-    def from_rotation_order(
-        cls, rotation_order: ROTATION_ORDER, has_position_channels: bool
-    ) -> "BVHChannelLayout":
+    def from_rotation_order(cls, rotation_order: ROTATION_ORDER, has_position_channels: bool) -> "BVHChannelLayout":
         position_channels: tuple[POSITION_CHANNELS, ...] = (
             ("Xposition", "Yposition", "Zposition") if has_position_channels else ()
         )

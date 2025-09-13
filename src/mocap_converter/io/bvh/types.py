@@ -57,4 +57,3 @@ def filter_rotation_channels(
     channels: tuple[CHANNEL_TYPES, ...],
 ) -> tuple[ROTATION_CHANNELS, ...]:
     return tuple(ch for ch in channels if ch in ("Xrotation", "Yrotation", "Zrotation"))
-
