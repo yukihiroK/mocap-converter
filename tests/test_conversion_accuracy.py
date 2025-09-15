@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -11,9 +11,14 @@ from mocap_converter.pos2rot import get_rotations_from_positions
 from mocap_converter.rot2pos import get_positions_from_rotations
 
 
-@pytest.fixture
-def sample_bvh_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "fixtures", "calibration1.bvh")
+def _list_fixture_bvh_files() -> list[str]:
+    fixtures_dir = Path(__file__).parent / "fixtures"
+    return sorted(str(p) for p in fixtures_dir.rglob("*.bvh"))
+
+
+@pytest.fixture(params=_list_fixture_bvh_files(), ids=lambda p: str(Path(p).relative_to(Path(__file__).parent / "fixtures").as_posix()))
+def sample_bvh_path(request: pytest.FixtureRequest) -> str:
+    return str(request.param)
 
 
 @pytest.fixture

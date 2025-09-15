@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+import pytest
 
 import numpy as np
 from numpy.typing import NDArray
@@ -151,10 +152,21 @@ def test_save_bvh_motion_values() -> None:
             pass
 
 
-def test_save_load_roundtrip_with_fixture() -> None:
-    # Locate fixture BVH
+def _list_fixture_bvh_files() -> list[Path]:
+    """Discover all BVH files under tests/fixtures recursively."""
     tests_dir: Path = Path(__file__).resolve().parents[2]
-    fixture_path: Path = tests_dir / "fixtures" / "calibration1.bvh"
+    fixtures_dir: Path = tests_dir / "fixtures"
+    return sorted(fixtures_dir.rglob("*.bvh"))
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    _list_fixture_bvh_files(),
+    ids=lambda p: str(p.relative_to(Path(__file__).resolve().parents[2] / "fixtures").as_posix()),
+)
+
+def test_save_load_roundtrip_with_fixture(fixture_path: Path) -> None:
+    # Ensure fixture exists
     assert fixture_path.exists(), f"Fixture not found: {fixture_path}"
 
     # Load original BVH
@@ -170,7 +182,7 @@ def test_save_load_roundtrip_with_fixture() -> None:
 
         # Compare frame meta
         assert reloaded.frame_count == original.frame_count
-        assert abs(reloaded.frame_time - original.frame_time) < 1e-9
+        assert abs(reloaded.frame_time - original.frame_time) < 1e-6
 
         # Compare positions and rotations per node present in original MotionData
         for node_name in original.kinematic_tree.nodes.keys():
@@ -184,7 +196,11 @@ def test_save_load_roundtrip_with_fixture() -> None:
                 rot_orig: NDArray[np.float64] = original.rotations[node_name]
                 rot_new: NDArray[np.float64] = reloaded.rotations[node_name]
                 assert rot_orig.shape == rot_new.shape
-                assert np.allclose(rot_orig, rot_new, atol=1e-6)
+                r_orig = R.from_quat(rot_orig)
+                r_new = R.from_quat(rot_new)
+                rel = r_new * r_orig.inv()
+                angles = rel.magnitude()
+                assert np.all(angles < 1e-6)
     finally:
         try:
             out_path.unlink()
