@@ -164,7 +164,6 @@ def _list_fixture_bvh_files() -> list[Path]:
     _list_fixture_bvh_files(),
     ids=lambda p: str(p.relative_to(Path(__file__).resolve().parents[2] / "fixtures").as_posix()),
 )
-
 def test_save_load_roundtrip_with_fixture(fixture_path: Path) -> None:
     # Ensure fixture exists
     assert fixture_path.exists(), f"Fixture not found: {fixture_path}"

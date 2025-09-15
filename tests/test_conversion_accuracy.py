@@ -16,7 +16,10 @@ def _list_fixture_bvh_files() -> list[str]:
     return sorted(str(p) for p in fixtures_dir.rglob("*.bvh"))
 
 
-@pytest.fixture(params=_list_fixture_bvh_files(), ids=lambda p: str(Path(p).relative_to(Path(__file__).parent / "fixtures").as_posix()))
+@pytest.fixture(
+    params=_list_fixture_bvh_files(),
+    ids=lambda p: str(Path(p).relative_to(Path(__file__).parent / "fixtures").as_posix()),
+)
 def sample_bvh_path(request: pytest.FixtureRequest) -> str:
     return str(request.param)
 
