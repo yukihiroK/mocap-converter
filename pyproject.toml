@@ -42,3 +42,14 @@ dev = [
   "ruff>=0.9.10",
   "scipy-stubs>=1.15.3",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mocap_converter"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src/mocap_converter",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+]
