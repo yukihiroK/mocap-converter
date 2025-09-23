@@ -56,12 +56,13 @@ def test_rot2pos2rot(motion_data: MotionData):
     )
 
     # Convert back to rotations
-    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node.name)
+    converted_rotations: dict[str, NDArray[np.float64]] = get_rotations_from_positions(positional_data, root_node.name)
 
     # Compare with original rotations
-    for node_name, converted_rotation in converted_rotations.items():
+    for node_name, converted_rotation_quat in converted_rotations.items():
         if motion_data.has_rotations(node_name):
             original_rotation: R = R.from_quat(motion_data.rotations[node_name])
+            converted_rotation: R = R.from_quat(converted_rotation_quat)
 
             # Calculate relative rotation
             relative_rots: R = converted_rotation * original_rotation.inv()
@@ -105,12 +106,12 @@ def test_rot2pos2rot2pos(motion_data: MotionData):
     )
 
     # Convert back to rotations
-    converted_rotations: dict[str, R] = get_rotations_from_positions(positional_data, root_node.name)
+    converted_rotations: dict[str, NDArray[np.float64]] = get_rotations_from_positions(positional_data, root_node.name)
 
     rotational_data: MotionData = MotionData(
         motion_data.kinematic_tree,
         positions={root_node.name: root_pos},
-        rotations={name: rot.as_quat() for name, rot in converted_rotations.items()},
+        rotations=converted_rotations,
         frame_time=motion_data.frame_time,
     )
 
