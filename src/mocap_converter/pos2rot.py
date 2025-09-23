@@ -54,11 +54,11 @@ def get_rotations_from_positions(
     motion_data: MotionData,
     current_node_name: str,
     accum_rot: R | None = None,  # (n_frames, 3, 3) or (3, 3)
-) -> dict[str, R]:
+) -> dict[str, NDArray[np.float64]]:
     if accum_rot is None:
         accum_rot = R.identity(motion_data.frame_count)
 
-    result: dict[str, R] = {}
+    result: dict[str, NDArray[np.float64]] = {}
     tree = motion_data.kinematic_tree
     children = tree.get_children(current_node_name)
     children_count = len(children)
@@ -69,7 +69,7 @@ def get_rotations_from_positions(
 
         initial_offset = child_node.offset  # (3,)
         if np.linalg.norm(initial_offset) == 0:  # child_node is an end effector
-            result[current_node_name] = R.identity(motion_data.frame_count)
+            result[current_node_name] = R.identity(motion_data.frame_count).as_quat()
             return result
 
         initial_offset = initial_offset / np.linalg.norm(initial_offset)
@@ -78,7 +78,7 @@ def get_rotations_from_positions(
         local_offsets = local_offsets / np.linalg.norm(local_offsets, axis=1)[:, np.newaxis]  # Normalize
 
         rotations = get_align_rotations(local_offsets.reshape(-1, 1, 3), initial_offset)
-        result[current_node_name] = rotations
+        result[current_node_name] = rotations.as_quat()
 
         r = get_rotations_from_positions(
             motion_data,
@@ -103,7 +103,7 @@ def get_rotations_from_positions(
         rotations = get_align_rotations(
             local_offsets, initial_offsets
         )  # (n_frames, n_children, 3), (n_children, 3) -> (n_frames, 4)
-        result[current_node_name] = rotations
+        result[current_node_name] = rotations.as_quat()
 
         for child_node in children:
             r = get_rotations_from_positions(
@@ -113,6 +113,6 @@ def get_rotations_from_positions(
             )
             result.update(r)
     else:
-        result[current_node_name] = R.identity(motion_data.frame_count)
+        result[current_node_name] = R.identity(motion_data.frame_count).as_quat()
 
     return result
