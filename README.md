@@ -3,6 +3,11 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/mocap-converter.svg)](https://pypi.org/project/mocap-converter)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mocap-converter.svg)](https://pypi.org/project/mocap-converter)
 
+`mocap-converter` is a library for turning motion-capture recordings into
+formats that downstream tools can reuse. It converts joint position traces
+captured during a mocap session into joint rotation data, making it easy to
+repurpose captured motion in other contexts.
+
 ## Installation
 
 Install with uv:
