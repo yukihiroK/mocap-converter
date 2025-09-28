@@ -64,7 +64,7 @@ def get_positions_from_json(json_data: dict[str, Any]) -> dict[str, NDArray[np.f
         end_frame = len(positions)
 
     if end_frame is not None:
-        positions = positions[: end_frame + 1]
+        positions = positions[: end_frame]
     positions_np = np.array(positions) / 10  # mm -> cm
     positions_np[:, :, 1] *= -1  # flip y axis
     positions_np[:, :, 2] *= -1  # flip z axis
