@@ -186,10 +186,10 @@ class KinematicTree:
         return [node for node in self.nodes.values() if node.parent_name == parent_node.name and node.name != node_name]
 
     @cached_property
-    def root(self) -> Node | None:
+    def root(self) -> Node:
         """Get the root node of the tree."""
         root_nodes = [node for node in self.nodes.values() if node.is_root]
-        return root_nodes[0] if root_nodes else None
+        return root_nodes[0]
 
     def has_children(self, node_name: str) -> bool:
         """Check if a node has children.
