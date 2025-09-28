@@ -3,19 +3,18 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/mocap-converter.svg)](https://pypi.org/project/mocap-converter)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mocap-converter.svg)](https://pypi.org/project/mocap-converter)
 
------
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Convert Azure Kinect Data to BVH](#convert-azure-kinect-data-to-bvh)
-- [License](#license)
-
 ## Installation
 
+Install with uv:
+
 ```console
-pip install mocap-converter
+$ uv add mocap-converter
+```
+
+Or install with pip:
+
+```console
+$ pip install mocap-converter
 ```
 
 ## Usage
