@@ -34,14 +34,8 @@ result as a BVH animation.
 ```python
 import json
 
-from mocap_converter.adapter.azure_kinect import (
-    AZURE_KINECT_KINEMATIC_TREE,
-    get_positions_from_json,
-)
-from mocap_converter.adjust_kinematic_tree import adjust_kinematic_tree
-from mocap_converter.io.bvh.saver import save_bvh
-from mocap_converter.motion_data import MotionData
-from mocap_converter.pos2rot import get_rotations_from_positions
+from mocap_converter import MotionData, adjust_kinematic_tree, get_rotations_from_positions, save_bvh
+from mocap_converter.adapter import AZURE_KINECT_KINEMATIC_TREE, get_positions_from_json
 
 
 with open("path/to/kinect_capture.json") as raw:
@@ -62,6 +56,28 @@ rotational_motion = MotionData(
 )
 
 save_bvh(rotational_motion, "path/to/output.bvh")
+```
+
+### Public API Imports
+
+The package exposes the most common building blocks from the top level:
+
+```python
+from mocap_converter import (
+    KinematicTree,
+    MotionData,
+    Node,
+    adapter,
+    adjust_kinematic_tree,
+    get_positions_from_rotations,
+    get_rotations_from_positions,
+)
+from mocap_converter.io import bvh
+
+adapter.AZURE_KINECT_KINEMATIC_TREE
+bvh.save_bvh
+bvh.load_bvh
+get_positions_from_rotations
 ```
 
 ## License
