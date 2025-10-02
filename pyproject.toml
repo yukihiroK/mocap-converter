@@ -45,6 +45,7 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mocap_converter"]
+force-include = {"src/mocap_converter/py.typed" = "mocap_converter/py.typed"}
 
 [tool.hatch.build.targets.sdist]
 include = [
