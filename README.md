@@ -58,28 +58,6 @@ rotational_motion = MotionData(
 save_bvh(rotational_motion, "path/to/output.bvh")
 ```
 
-### Public API Imports
-
-The package exposes the most common building blocks from the top level:
-
-```python
-from mocap_converter import (
-    KinematicTree,
-    MotionData,
-    Node,
-    adapter,
-    adjust_kinematic_tree,
-    get_positions_from_rotations,
-    get_rotations_from_positions,
-)
-from mocap_converter.io import bvh
-
-adapter.AZURE_KINECT_KINEMATIC_TREE
-bvh.save_bvh
-bvh.load_bvh
-get_positions_from_rotations
-```
-
 ## License
 
 `mocap-converter` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
